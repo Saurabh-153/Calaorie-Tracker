@@ -21,7 +21,7 @@ from auth import send_otp, verify_otp, SESSION_DAYS
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", os.urandom(32))
+app.secret_key = os.getenv("SECRET_KEY") or os.urandom(32)
 
 # ---------------------------------------------------------------------------
 # Flask-Login

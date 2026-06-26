@@ -1,12 +1,13 @@
 """DB connection helpers and raw SQL queries using sqlite3."""
 
+import os
 import sqlite3
 from contextlib import contextmanager
 from typing import List, Optional
 
 from models import FoodEntry, DailyGoal, AiResponseAuditLog, PromptVersion
 
-DB_PATH = "calorie_tracker.db"
+DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), "calorie_tracker.db"))
 
 
 # ---------------------------------------------------------------------------
