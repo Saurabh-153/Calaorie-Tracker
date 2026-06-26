@@ -71,16 +71,7 @@ def init_db():
                 is_active   INTEGER NOT NULL DEFAULT 0
             )
         """)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS api_keys (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                name        TEXT    NOT NULL,
-                provider    TEXT    NOT NULL,
-                api_key     TEXT    NOT NULL,
-                notes       TEXT,
-                created_at  TEXT    NOT NULL
-            )
-        """)
+
 
 
 # ---------------------------------------------------------------------------
@@ -258,30 +249,6 @@ def delete_prompt_version(version_id: int):
     """Delete a prompt version by id."""
     with get_db() as conn:
         conn.execute("DELETE FROM prompt_versions WHERE id = ?", (version_id,))
-
-
-def insert_api_key(name: str, provider: str, api_key: str, notes: str, created_at: str) -> int:
-    """Insert an API key record and return its id."""
-    with get_db() as conn:
-        cur = conn.execute(
-            """INSERT INTO api_keys (name, provider, api_key, notes, created_at)
-               VALUES (?, ?, ?, ?, ?)""",
-            (name, provider, api_key, notes, created_at),
-        )
-        return cur.lastrowid
-
-
-def get_api_keys() -> list:
-    """Return all API key records ordered newest first."""
-    with get_db() as conn:
-        rows = conn.execute("SELECT * FROM api_keys ORDER BY created_at DESC, id DESC").fetchall()
-    return [dict(r) for r in rows]
-
-
-def delete_api_key(key_id: int):
-    """Delete an API key by id."""
-    with get_db() as conn:
-        conn.execute("DELETE FROM api_keys WHERE id = ?", (key_id,))
 
 
 def update_prompt_version(version_id: int, name: str, content: str):

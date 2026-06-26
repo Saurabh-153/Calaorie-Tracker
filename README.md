@@ -1,10 +1,10 @@
 # Calorie Tracker
 
-Lightweight Flask-based calorie tracker with multimodel AI parsing and admin tools.
+Lightweight Flask-based calorie tracker with multi-model AI food parsing, audit logging, and prompt version management.
 
-Quickstart
+## Quickstart
 
-1. Create a Python 3.11/3.12 virtual environment and install requirements:
+### 1. Create a virtual environment and install dependencies
 
 ```bash
 python -m venv .venv
@@ -12,56 +12,87 @@ source .venv/bin/activate   # PowerShell: .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-2. Initialize the SQLite DB (happens automatically on app start):
+### 2. Configure API keys
+
+Copy the `.env` file (already provided) and fill in the keys for the providers you want to use:
+
+```
+ACTIVE_PROVIDER=sarvam        # gemini | openai | anthropic | sarvam | grok | deepseek
+
+GEMINI_API_KEY=your_gemini_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+SARVAM_API_KEY=your_sarvam_api_key_here
+GROK_API_KEY=your_grok_api_key_here
+DEEPSEEK_API_KEY=your_deepseek_api_key_here
+```
+
+You can also override the model used per provider:
+
+```
+GEMINI_MODEL=gemini-2.0-flash
+OPENAI_MODEL=gpt-4o-mini
+ANTHROPIC_MODEL=claude-3-haiku-20240307
+SARVAM_MODEL=sarvam-105b
+GROK_MODEL=grok-beta
+DEEPSEEK_MODEL=deepseek-chat
+```
+
+> `.env` is in `.gitignore` — your keys are never committed.
+
+### 3. Run the app
 
 ```bash
 python app.py
-# opens on http://0.0.0.0:3000
+# opens on http://localhost:3000
 ```
 
-Deployment on Render (example)
+The SQLite database is created automatically on first run.
 
-- Create a new **Web Service** on Render and connect your repo.
-- Build Command: `pip install -r requirements.txt`
-- Start Command (Render will use `Procfile`): `gunicorn app:app --bind 0.0.0.0:$PORT`
+---
 
-Ensure `requirements.txt` includes `gunicorn` (already added).
+## Deployment (Render)
 
-3. Open the admin page to configure API keys:
+- Create a new **Web Service** and connect your repo.
+- **Build command:** `pip install -r requirements.txt`
+- **Start command:** `gunicorn app:app --bind 0.0.0.0:$PORT` (uses `Procfile`)
+- Add your API keys as **Environment Variables** in the Render dashboard.
 
-- Admin API keys: `http://localhost:3000/admin/apis`
-- Prompt versions: `http://localhost:3000/admin/prompts`
+---
 
-Notes
+## Admin pages
 
-- API keys are stored in the SQLite DB (`calorie_tracker.db`) and take precedence over environment variables.
-- The app runs on port `3000` by default.
+| URL | Purpose |
+|-----|---------|
+| `/admin/prompts` | Manage and switch system prompt versions |
+| `/admin/audit-logs` | View AI response audit log |
 
-Project structure (current)
+---
 
-- `app.py` — Flask routes and entrypoint
-- `database.py` — SQLite helpers and schema
-- `models.py` — dataclasses for domain objects
-- `prompt_service.py` — system prompt loading
-- `templates/` — Jinja2 templates
-- `static/` — CSS
-- Provider implementations: `*provider.py` (openai, sarvam, gemini, etc.)
+## Project structure
 
-Recommended structure improvements
+```
+app.py                  — Flask routes and entry point
+config.py               — Provider/model configuration, reads from .env
+ai_config.py            — Provider factory, API key loading
+database.py             — SQLite helpers and schema
+models.py               — Dataclasses for domain objects
+prompt_service.py       — System prompt loading
+.env                    — API keys and active provider (not committed)
+templates/              — Jinja2 HTML templates
+static/                 — CSS
+*_provider.py           — Per-provider AI implementations (openai, gemini, sarvam, …)
+```
 
-- Move provider modules into a `providers/` package: `providers/sarvam.py`, `providers/openai.py`, etc.
-- Convert `app.py` into a package `calorie_tracker/__init__.py` and `calorie_tracker/app.py` to enable imports and easier testing.
-- Add `calorie_tracker/config.py` for centralized configuration.
-- Add a small `scripts/` folder for maintenance tasks (DB migration, key export/import).
+---
 
-Git compatibility
+## Supported AI providers
 
-- This repo now includes a `.gitignore` (see below) to exclude virtualenvs, DB, and pycache.
-
-If you want, I can:
-
-- Apply the recommended refactor (move files into packages) and update imports.
-- Add basic auth for admin pages.
-- Add key encryption for stored API keys.
-
-Which of the above should I do next?
+| Provider | Key variable | Default model |
+|----------|-------------|---------------|
+| Sarvam | `SARVAM_API_KEY` | `sarvam-105b` |
+| Gemini | `GEMINI_API_KEY` | `gemini-2.0-flash` |
+| OpenAI | `OPENAI_API_KEY` | `gpt-4o-mini` |
+| Anthropic | `ANTHROPIC_API_KEY` | `claude-3-haiku-20240307` |
+| Grok | `GROK_API_KEY` | `grok-beta` |
+| DeepSeek | `DEEPSEEK_API_KEY` | `deepseek-chat` |

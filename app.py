@@ -388,39 +388,6 @@ def audit_logs():
     )
 
 
-@app.route("/admin/apis", methods=["GET", "POST"])
-def admin_apis():
-    """Manage API keys: list, create (POST), delete (POST to /admin/apis/delete)."""
-    if request.method == "POST":
-        # create new
-        name = request.form.get("name", "")
-        provider = request.form.get("provider", "")
-        api_key = request.form.get("api_key", "")
-        notes = request.form.get("notes", "")
-        if name and provider and api_key:
-            created_at = datetime.now().isoformat()
-            db.insert_api_key(name, provider, api_key, notes, created_at)
-        return redirect(url_for("admin_apis"))
-
-    keys = db.get_api_keys()
-    # mask api_key for display
-    for k in keys:
-        raw = k.get("api_key", "")
-        if len(raw) > 4:
-            k["masked"] = "****" + raw[-4:]
-        else:
-            k["masked"] = "****"
-
-    providers = list_providers()
-    return render_template("admin_api_keys.html", today=today_str(), keys=keys, providers=providers)
-
-
-@app.route("/admin/apis/delete/<int:key_id>", methods=["POST"])
-def admin_apis_delete(key_id: int):
-    db.delete_api_key(key_id)
-    return redirect(url_for("admin_apis"))
-
-
 @app.route("/api/audit-logs")
 def api_audit_logs():
     """Return recent AI response audit logs as JSON."""

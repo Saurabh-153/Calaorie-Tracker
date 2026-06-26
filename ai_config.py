@@ -1,7 +1,9 @@
 """AI provider factory and configuration."""
 
 import os
-import database as db
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from ai_provider import AIProvider
 from gemini import gemini_provider
@@ -34,22 +36,11 @@ PROVIDERS = {
     "deepseek": deepseek_provider,
 }
 
-# API Keys: prefer DB-stored keys, fallback to environment variables
+# API Keys: read from .env / environment variables
 API_KEYS = {
     name: os.getenv(key_name)
     for name, key_name in API_KEY_NAMES.items()
 }
-
-# Override with DB-stored keys if present (DB is the source of truth)
-try:
-    db_keys = {r["provider"]: r["api_key"] for r in db.get_api_keys()}
-    for provider_name, key in db_keys.items():
-        # if provider is in our known names, map it
-        if provider_name in API_KEYS:
-            API_KEYS[provider_name] = key
-except Exception:
-    # If DB isn't available yet during import, silently continue using env
-    pass
 
 
 def get_provider() -> AIProvider:
