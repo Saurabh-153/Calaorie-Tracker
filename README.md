@@ -19,6 +19,14 @@ python app.py
 # opens on http://0.0.0.0:3000
 ```
 
+Deployment on Render (example)
+
+- Create a new **Web Service** on Render and connect your repo.
+- Build Command: `pip install -r requirements.txt`
+- Start Command (Render will use `Procfile`): `gunicorn app:app --bind 0.0.0.0:$PORT`
+
+Ensure `requirements.txt` includes `gunicorn` (already added).
+
 3. Open the admin page to configure API keys:
 
 - Admin API keys: `http://localhost:3000/admin/apis`
