@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card">
+  <div class="nl-header">
+    <h2 class="section-label">AI Audit Logs</h2>
+    <form method="get" class="provider-selector">
+      <label for="limit">Show</label>
+      <select id="limit" name="limit" class="provider-dropdown" onchange="this.form.submit()">
+        <option value="20" {% if limit == 20 %}selected{% endif %}>20</option>
+        <option value="50" {% if limit == 50 %}selected{% endif %}>50</option>
+        <option value="100" {% if limit == 100 %}selected{% endif %}>100</option>
+      </select>
+    </form>
+  </div>
+
+  {% if logs %}
+  <div class="audit-log-list">
+    {% for log in logs %}
+    <article class="audit-log-item">
+      <div class="audit-log-meta">
+        <span><strong>{{ log.provider }}</strong></span>
+        <span class="audit-log-status {{ log.status }}">{{ log.status }}</span>
+        <span>{{ log.timestamp }}</span>
+        <form method="post" action="{{ url_for('delete_audit_log', log_id=log.id) }}">
+          <button class="btn btn-delete" type="submit" title="Delete this log">×</button>
+        </form>
+      </div>
+      <div class="audit-log-input">
+        <span class="audit-log-label">Input</span>
+        {{ log.input_text }}
+      </div>
+      <div class="audit-log-response">
+        <span class="audit-log-label">Response</span>
+        {{ log.response_payload }}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="audit-log-empty">No audit logs yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

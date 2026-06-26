@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card">
+  <h2 class="section-label">API Keys</h2>
+  <p>Store provider API keys here. Keys are shown masked.</p>
+
+  <form method="post" action="{{ url_for('admin_apis') }}" class="form-inline">
+    <div>
+      <label>Name</label>
+      <input name="name" required />
+    </div>
+    <div>
+      <label>Provider</label>
+      <select name="provider">
+        {% for p in providers %}
+        <option value="{{ p }}">{{ p }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>API Key</label>
+      <input name="api_key" required />
+    </div>
+    <div>
+      <label>Notes</label>
+      <input name="notes" />
+    </div>
+    <div>
+      <button class="btn" type="submit">Add API Key</button>
+    </div>
+  </form>
+
+  <hr />
+  <h3>Stored Keys</h3>
+  <table class="log-table">
+    <thead>
+      <tr><th>Name</th><th>Provider</th><th>Key</th><th>Notes</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for k in keys %}
+      <tr>
+        <td>{{ k.name }}</td>
+        <td>{{ k.provider }}</td>
+        <td>{{ k.masked }}</td>
+        <td>{{ k.notes }}</td>
+        <td>
+          <form method="post" action="{{ url_for('admin_apis_delete', key_id=k.id) }}" onsubmit="return confirm('Delete this key?')">
+            <button class="btn" type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">No keys yet</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

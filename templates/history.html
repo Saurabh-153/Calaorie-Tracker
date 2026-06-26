@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="card history-toggle-card">
+  <div class="nl-header">
+    <h2 class="section-label">History</h2>
+    <div class="view-switcher">
+      <a class="btn {% if view == 'weekly' %}active{% endif %}" href="{{ url_for('history', view='weekly') }}">Weekly</a>
+      <a class="btn {% if view == 'monthly' %}active{% endif %}" href="{{ url_for('history', view='monthly') }}">Monthly</a>
+    </div>
+  </div>
+</section>
+
+<section class="card summary-card">
+  <div class="summary-grid">
+    <div>
+      <span class="summary-label">Selected range</span>
+      <strong>{{ summary.days }} days</strong>
+    </div>
+    <div>
+      <span class="summary-label">Total calories</span>
+      <strong>{{ summary.total_calories | int }}</strong>
+    </div>
+    <div>
+      <span class="summary-label">Average per day</span>
+      <strong>{{ summary.average_calories | int }}</strong>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  {% if view == 'weekly' %}
+  <h2 class="section-label">7-Day Calorie Overview</h2>
+  {% else %}
+  <div style="display:flex; align-items:center; gap:.75rem;">
+    <form method="get" action="{{ url_for('history') }}">
+      <input type="hidden" name="view" value="monthly" />
+      <input type="hidden" name="year" value="{{ prev_month[0] }}" />
+      <input type="hidden" name="month" value="{{ prev_month[1] }}" />
+      <button class="btn" type="submit">◀</button>
+    </form>
+    <h2 class="section-label">{{ month_title or 'Monthly' }} Calorie Overview</h2>
+    <form method="get" action="{{ url_for('history') }}">
+      <input type="hidden" name="view" value="monthly" />
+      <input type="hidden" name="year" value="{{ next_month[0] }}" />
+      <input type="hidden" name="month" value="{{ next_month[1] }}" />
+      <button class="btn" type="submit">▶</button>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if view == 'weekly' %}
+  {# Weekly bar chart #}
+  {% set chart_w  = 600 %}
+  {% set chart_h  = 220 %}
+  {% set pad_left = 44 %}
+  {% set pad_top  = 16 %}
+  {% set svg_w    = chart_w + pad_left + 16 %}
+  {% set svg_h    = chart_h + pad_top + 52 %}
+  {% set n        = days | length %}
+  {% set bar_w    = 50 %}
+  {% set gap      = ((chart_w - n * bar_w) / (n + 1)) | round(0) | int %}
+
+  <div class="chart-wrap">
+    <svg viewBox="0 0 {{ svg_w }} {{ svg_h }}" xmlns="http://www.w3.org/2000/svg"
+         class="bar-chart" aria-label="{{ view }} calorie bar chart">
+
+      {% for frac in [1.0, 0.75, 0.5, 0.25, 0.0] %}
+        {% set y = pad_top + chart_h * (1 - frac) %}
+        {% set val = (chart_max * frac) | round(0) | int %}
+        <text x="{{ pad_left - 6 }}" y="{{ y + 4 }}"
+              text-anchor="end" class="axis-label">{{ val }}</text>
+        <line x1="{{ pad_left }}" y1="{{ y }}"
+              x2="{{ pad_left + chart_w }}" y2="{{ y }}"
+              stroke="#ddd" stroke-width="1" />
+      {% endfor %}
+
+      {% set goal_y = pad_top + chart_h * (1 - goal_line / chart_max) %}
+      <line x1="{{ pad_left }}" y1="{{ goal_y }}"
+            x2="{{ pad_left + chart_w }}" y2="{{ goal_y }}"
+            stroke="#E8614A" stroke-width="1.5"
+            stroke-dasharray="6 4" />
+      <text x="{{ pad_left + chart_w + 4 }}" y="{{ goal_y + 4 }}"
+            class="goal-label" fill="#E8614A" font-size="11">goal</text>
+
+      {% for day in days %}
+        {% set cal = day.totals.calories %}
+        {% set bar_h = (cal / chart_max * chart_h) if chart_max > 0 else 0 %}
+        {% set x = pad_left + gap + loop.index0 * (bar_w + gap) %}
+        {% set y = pad_top + chart_h - bar_h %}
+
+        {% if cal > goal_line %}
+          {% set teal_h = (goal_line / chart_max * chart_h) if chart_max > 0 else 0 %}
+          {% set coral_h = bar_h - teal_h %}
+          <rect x="{{ x }}" y="{{ pad_top + chart_h - teal_h }}"
+                width="{{ bar_w }}" height="{{ teal_h }}"
+                fill="#0D9E8A" rx="3" />
+          <rect x="{{ x }}" y="{{ y }}"
+                width="{{ bar_w }}" height="{{ coral_h }}"
+                fill="#E8614A" rx="3" />
+        {% else %}
+          <rect x="{{ x }}" y="{{ y }}"
+                width="{{ bar_w }}" height="{{ bar_h }}"
+                fill="#0D9E8A" rx="3" />
+        {% endif %}
+
+        <text x="{{ x + bar_w / 2 }}" y="{{ y - 6 }}"
+              text-anchor="middle" class="bar-value"
+              fill="{% if cal > goal_line %}#E8614A{% else %}#1C1C1E{% endif %}"
+              font-size="12" font-weight="600">{{ cal }}</text>
+
+        <text x="{{ x + bar_w / 2 }}" y="{{ pad_top + chart_h + 18 }}"
+              text-anchor="middle" class="axis-label" font-size="12">{{ day.label }}</text>
+      {% endfor %}
+
+    </svg>
+  </div>
+  {% else %}
+  {# Monthly calendar grid #}
+  <div class="calendar-grid">
+    <div class="calendar-header">Sun</div>
+    <div class="calendar-header">Mon</div>
+    <div class="calendar-header">Tue</div>
+    <div class="calendar-header">Wed</div>
+    <div class="calendar-header">Thu</div>
+    <div class="calendar-header">Fri</div>
+    <div class="calendar-header">Sat</div>
+
+    {% for week in weeks %}
+      {% for day in week %}
+        {% if day %}
+          {% set bubble_size = 16 + (day.totals.calories / chart_max * 24) if chart_max > 0 else 16 %}
+          <div class="calendar-cell{% if day.date == today %} today{% endif %}" title="Calories: {{ day.totals.calories }} kcal — Goal: {{ day.goal.calorie_goal }} kcal — Diff: {{ day.totals.calories - day.goal.calorie_goal }} kcal">
+            <div class="calendar-day-label">{{ '%02d' | format(day.date[-2:] | int) }}</div>
+            <div class="calendar-bubble" style="width: {{ bubble_size }}px; height: {{ bubble_size }}px;">
+              <span>{{ day.totals.calories }}</span>
+            </div>
+          </div>
+        {% else %}
+          <div class="calendar-cell empty"></div>
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+
+<!-- ─── Per-Day Detail Tables ──────────────────────────────────────── -->
+{% for day in days %}
+<section class="card day-card">
+  <div class="day-header">
+    <span class="day-title">{{ day.label }}</span>
+    <span class="day-date">{{ day.date }}</span>
+    <span class="day-kcal {% if day.totals.calories > day.goal.calorie_goal %}text-coral{% endif %}">
+      {{ day.totals.calories }} / {{ day.goal.calorie_goal }} kcal
+    </span>
+  </div>
+  {% if day.entries %}
+  <div class="table-wrap">
+    <table class="log-table">
+      <thead>
+        <tr>
+          <th>Food</th>
+          <th class="num">kcal</th>
+          <th class="num">P</th>
+          <th class="num">C</th>
+          <th class="num">F</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in day.entries %}
+        <tr>
+          <td>{{ e.name }}</td>
+          <td class="num">{{ e.calories }}</td>
+          <td class="num">{{ e.protein }}</td>
+          <td class="num">{{ e.carbs }}</td>
+          <td class="num">{{ e.fat }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty-state">No entries</p>
+  {% endif %}
+</section>
+{% endfor %}
+
+{% endblock %}

@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+venv/
+.Python
+calorie_tracker.db
+*.sqlite
+.DS_Store
+.env
+.idea/
+.vscode/
+*.log

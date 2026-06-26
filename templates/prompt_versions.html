@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card">
+  <div class="nl-header">
+    <h2 class="section-label">Prompt Versions</h2>
+    <a class="btn btn-teal" href="#new-version">New Version</a>
+  </div>
+
+  {% if active %}
+  <div class="audit-log-item">
+    <div class="audit-log-meta">
+      <span><strong>Current Active Prompt</strong></span>
+      <span class="audit-log-status ok">ACTIVE</span>
+    </div>
+    <div class="audit-log-input">
+      <span class="audit-log-label">Name</span>
+      {{ active.name }}
+    </div>
+    <div class="audit-log-response">
+      <span class="audit-log-label">Content</span>
+      {{ active.content }}
+    </div>
+  </div>
+  {% endif %}
+
+  {% for version in versions %}
+  <article class="audit-log-item">
+    <div class="audit-log-meta">
+      <span><strong>{{ version.name }}</strong></span>
+      {% if version.is_active %}
+      <span class="audit-log-status ok">ACTIVE</span>
+      {% else %}
+      <span class="audit-log-status error">INACTIVE</span>
+      {% endif %}
+      <span>{{ version.created_at }}</span>
+      <div style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:center;">
+        {% if not version.is_active %}
+        <form method="post" action="{{ url_for('activate_prompt_version', version_id=version.id) }}">
+          <button class="btn btn-teal" type="submit">Make Current</button>
+        </form>
+        <form method="post" action="{{ url_for('delete_prompt_version', version_id=version.id) }}" onsubmit="return confirm('Delete this prompt version? This cannot be undone.')">
+          <button class="btn btn-danger" type="submit">Delete</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    <div class="audit-log-response">
+      <span class="audit-log-label">Prompt</span>
+      {{ version.content }}
+    </div>
+  </article>
+  {% endfor %}
+</section>
+
+<section class="card" id="new-version">
+  <h2 class="section-label">Create / Edit Prompt Version</h2>
+  <form method="post" action="{{ url_for('save_prompt_version') }}">
+    <label class="audit-log-label" for="name">Version Name</label>
+    <input type="text" id="name" name="name" placeholder="e.g. Nutrition Prompt v2" style="width:100%; margin-bottom: .75rem;" />
+
+    <label class="audit-log-label" for="content">Prompt Content</label>
+    <textarea id="content" name="content" rows="16" style="width:100%; font-family: monospace; padding: .75rem; border: 1px solid #ddd; border-radius: 8px;"></textarea>
+
+    <div style="margin-top: .75rem; display:flex; gap:.75rem;">
+      <button class="btn btn-teal" type="submit">Save Version</button>
+      <a class="btn" href="{{ url_for('prompt_versions_page') }}">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

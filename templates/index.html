@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- ─── Natural Language Food Entry (AI) ──────────────────────────── -->
+<section class="card nl-card">
+  <div class="nl-header">
+    <h2 class="section-label">Add Food (AI-Powered)</h2>
+    <div class="provider-selector">
+      <label for="provider-select">AI Provider:</label>
+      <select id="provider-select" class="provider-dropdown" onchange="changeProvider()">
+        {% for provider in providers %}
+        <option value="{{ provider }}" {% if provider == active_provider %}selected{% endif %}>{{ provider }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  <p class="nl-hint">Describe your meal in natural language, e.g. "1 roti, 1 cup dal, 100g rice" or "2 eggs with toast and coffee"</p>
+  <div class="nl-input-row">
+    <textarea id="nl-input" class="nl-textarea" placeholder="e.g. 2 eggs, 1 slice toast with butter, 1 cup coffee with milk" rows="2"></textarea>
+    <button id="nl-parse-btn" class="btn btn-teal" onclick="parseFood()">Parse & Add</button>
+  </div>
+  <div id="nl-loading" class="nl-loading" style="display:none;">
+    <span class="spinner"></span> Analyzing with AI...
+  </div>
+  <div id="nl-error" class="nl-error" style="display:none;"></div>
+  <div id="nl-results" class="nl-results" style="display:none;">
+    <table class="log-table">
+      <thead>
+        <tr>
+          <th class="check-col"></th>
+          <th>Food</th>
+          <th>Portion</th>
+          <th class="num">kcal</th>
+          <th class="num">P</th>
+          <th class="num">C</th>
+          <th class="num">F</th>
+        </tr>
+      </thead>
+      <tbody id="nl-results-body"></tbody>
+    </table>
+    <div class="nl-results-footer">
+      <span id="nl-total" class="nl-total"></span>
+      <button class="btn btn-teal" onclick="addSelectedItems()">Add Selected to Log</button>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Progress Bar ───────────────────────────────────────────────── -->
+<section class="card progress-card">
+  {% set pct = ((totals.calories / goal.calorie_goal) * 100) | round(0) | int if goal.calorie_goal > 0 else 0 %}
+  {% set over = totals.calories > goal.calorie_goal %}
+
+  <div class="progress-header">
+    <span class="big-number {% if over %}text-coral{% endif %}">{{ totals.calories }}</span>
+    <span class="progress-of">/ {{ goal.calorie_goal }} kcal</span>
+    <span class="progress-pct {% if over %}text-coral{% endif %}">{{ pct }}%</span>
+  </div>
+
+  <div class="progress-track">
+    <div class="progress-fill {% if over %}fill-coral{% endif %}"
+         style="width: {{ [pct, 100] | min }}%;"></div>
+  </div>
+</section>
+
+<!-- ─── Macros Row ─────────────────────────────────────────────────── -->
+<section class="macros-row">
+  <div class="macro-item">
+    <span class="macro-label">PROTEIN</span>
+    <span class="macro-value">{{ totals.protein }}<small>g</small></span>
+  </div>
+  <div class="macro-item">
+    <span class="macro-label">CARBS</span>
+    <span class="macro-value">{{ totals.carbs }}<small>g</small></span>
+  </div>
+  <div class="macro-item">
+    <span class="macro-label">FAT</span>
+    <span class="macro-value">{{ totals.fat }}<small>g</small></span>
+  </div>
+</section>
+
+<!-- ─── Food Log Table ─────────────────────────────────────────────── -->
+<section class="card">
+  <h2 class="section-label">Today's Log</h2>
+  {% if entries %}
+  <div class="table-wrap">
+    <table class="log-table">
+      <thead>
+        <tr>
+          <th>Food</th>
+          <th class="num">kcal</th>
+          <th class="num">P</th>
+          <th class="num">C</th>
+          <th class="num">F</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+        <tr>
+          <td>{{ e.name }}</td>
+          <td class="num">{{ e.calories }}</td>
+          <td class="num">{{ e.protein }}</td>
+          <td class="num">{{ e.carbs }}</td>
+          <td class="num">{{ e.fat }}</td>
+          <td class="action-cell">
+            <form method="POST" action="{{ url_for('delete_entry', entry_id=e.id) }}"
+                  onsubmit="return confirm('Delete this entry?')">
+              <button type="submit" class="btn-delete" title="Delete">&times;</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty-state">No entries yet today. Use the AI-powered input above to add your first meal.</p>
+  {% endif %}
+</section>
+
+<!-- ─── Daily Goal Setter ──────────────────────────────────────────── -->
+<section class="card goal-card">
+  <h2 class="section-label">Daily Goal</h2>
+  <form method="POST" action="{{ url_for('save_goal') }}" class="goal-form">
+    <input type="number" name="calorie_goal" value="{{ goal.calorie_goal }}"
+           min="500" max="10000" required class="input-num" />
+    <span class="goal-unit">kcal / day</span>
+    <button type="submit" class="btn btn-teal">Save</button>
+  </form>
+</section>
+
+<script>
+// ─── Natural Language Food Parsing ───────────────────────────────────
+let parsedItems = [];
+
+async function parseFood() {
+  const input = document.getElementById('nl-input').value.trim();
+  if (!input) return;
+
+  // Show loading state
+  document.getElementById('nl-parse-btn').disabled = true;
+  document.getElementById('nl-loading').style.display = 'block';
+  document.getElementById('nl-error').style.display = 'none';
+  document.getElementById('nl-results').style.display = 'none';
+
+  try {
+    const resp = await fetch('/api/parse-food', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({text: input})
+    });
+
+    const rawText = await resp.text();
+    let data = {};
+    try {
+      data = rawText ? JSON.parse(rawText) : {};
+    } catch (parseErr) {
+      data = { error: `Server returned an invalid response: ${rawText.slice(0, 200)}` };
+    }
+
+    if (data.error) {
+      document.getElementById('nl-error').textContent = data.error;
+      document.getElementById('nl-error').style.display = 'block';
+    } else if (data.items && data.items.length > 0) {
+      const total = data.total || {
+        calories: data.total_calories || 0,
+        protein: data.total_protein || 0,
+        carbs: data.total_carbs || 0,
+        fat: data.total_fat || 0,
+      };
+      parsedItems = data.items;
+      renderParsedItems(data.items, total);
+      document.getElementById('nl-results').style.display = 'block';
+    } else {
+      document.getElementById('nl-error').textContent = 'No food items found in your description.';
+      document.getElementById('nl-error').style.display = 'block';
+    }
+  } catch (err) {
+    document.getElementById('nl-error').textContent = 'Request failed: ' + err.message;
+    document.getElementById('nl-error').style.display = 'block';
+  } finally {
+    document.getElementById('nl-parse-btn').disabled = false;
+    document.getElementById('nl-loading').style.display = 'none';
+  }
+}
+
+function renderParsedItems(items, total) {
+  const tbody = document.getElementById('nl-results-body');
+  tbody.innerHTML = '';
+
+  items.forEach((item, idx) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="check-col"><input type="checkbox" checked data-idx="${idx}" /></td>
+      <td>${item.name}</td>
+      <td class="portion-cell">${item.portion || '-'}</td>
+      <td class="num">${item.calories}</td>
+      <td class="num">${item.protein}</td>
+      <td class="num">${item.carbs}</td>
+      <td class="num">${item.fat}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('nl-total').innerHTML =
+    `<strong>Total:</strong> ${total.calories} kcal &nbsp;|&nbsp; P: ${total.protein}g &nbsp; C: ${total.carbs}g &nbsp; F: ${total.fat}g`;
+}
+
+async function addSelectedItems() {
+  const checkboxes = document.querySelectorAll('#nl-results-body input[type="checkbox"]:checked');
+  const selected = [];
+  checkboxes.forEach(cb => {
+    const idx = parseInt(cb.dataset.idx);
+    selected.push(parsedItems[idx]);
+  });
+
+  if (selected.length === 0) return;
+
+  try {
+    const resp = await fetch('/add-bulk', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({items: selected})
+    });
+    const data = await resp.json();
+    if (data.count > 0) {
+      // Reload the page to show updated totals
+      window.location.reload();
+    }
+  } catch (err) {
+    alert('Failed to add items: ' + err.message);
+  }
+}
+
+// Allow Ctrl+Enter to trigger parse
+document.getElementById('nl-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    parseFood();
+  }
+});
+
+// ─── Provider Selection ──────────────────────────────────────────────
+async function changeProvider() {
+  const provider = document.getElementById('provider-select').value;
+  
+  try {
+    const resp = await fetch('/api/providers/active', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({provider: provider})
+    });
+    const data = await resp.json();
+    
+    if (data.error) {
+      alert('Failed to change provider: ' + data.error);
+    } else {
+      console.log('Provider changed to:', data.active);
+    }
+  } catch (err) {
+    alert('Failed to change provider: ' + err.message);
+  }
+}
+</script>
+
+{% endblock %}
