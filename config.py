@@ -16,6 +16,7 @@ DEFAULT_MODELS = {
     "sarvam": os.getenv("SARVAM_MODEL", "sarvam-105b").strip() or "sarvam-105b",
     "grok": os.getenv("GROK_MODEL", "grok-beta").strip() or "grok-beta",
     "deepseek": os.getenv("DEEPSEEK_MODEL", "deepseek-chat").strip() or "deepseek-chat",
+    "openrouter": os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini").strip() or "openai/gpt-4o-mini",
 }
 
 # API key names used by the app
@@ -26,6 +27,7 @@ API_KEY_NAMES = {
     "sarvam": "SARVAM_API_KEY",
     "grok": "GROK_API_KEY",
     "deepseek": "DEEPSEEK_API_KEY",
+    "openrouter": "OPENROUTER_API_KEY",
 }
 
 

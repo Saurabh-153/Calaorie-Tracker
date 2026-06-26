@@ -9,6 +9,7 @@ class FoodEntry:
     """A single food/log entry for a given date."""
 
     id: Optional[int]
+    user_id: int
     date: str  # ISO string YYYY-MM-DD
     name: str
     calories: int
@@ -20,10 +21,13 @@ class FoodEntry:
 
 @dataclass
 class DailyGoal:
-    """Calorie goal for a specific date."""
+    """Calorie, protein and carbs goal for a specific date."""
 
-    date: str  # ISO string YYYY-MM-DD (PRIMARY KEY)
+    user_id: int
+    date: str           # ISO string YYYY-MM-DD
     calorie_goal: int
+    protein_goal: float = 0.0   # grams
+    carbs_goal: float   = 0.0   # grams
 
 
 @dataclass

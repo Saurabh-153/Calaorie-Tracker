@@ -18,10 +18,30 @@
            class="{% if request.endpoint == 'index' %}active{% endif %}">Dashboard</a>
         <a href="{{ url_for('history') }}"
            class="{% if request.endpoint == 'history' %}active{% endif %}">History</a>
-        <a href="{{ url_for('audit_logs') }}"
-           class="{% if request.endpoint == 'audit_logs' %}active{% endif %}">Audit Logs</a>
-        <a href="{{ url_for('prompt_versions_page') }}"
-           class="{% if request.endpoint == 'prompt_versions_page' %}active{% endif %}">Prompts</a>
+        <!-- Settings dropdown (gear) -->
+        <div class="settings-dropdown">
+          <button class="settings-trigger" aria-expanded="false" title="Settings">
+            <!-- simple gear icon -->
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06A2 2 0 1 1 4.27 16.9l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09c.7 0 1.34-.39 1.51-1a1.65 1.65 0 0 0-.33-1.82L4.27 3.73A2 2 0 1 1 7.1.9l.06.06a1.65 1.65 0 0 0 1.82.33h.09C9.97 1.29 10.61 1 11.3 1H12.7c.69 0 1.33.29 1.82.69h.09a1.65 1.65 0 0 0 1.82-.33l.06-.06A2 2 0 1 1 19.73 3.73l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09c.2.6.8 1 1.51 1H21a2 2 0 1 1 0 4h-.09c-.7 0-1.34.39-1.51 1z" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div class="settings-menu" role="menu">
+            <a href="{{ url_for('audit_logs') }}" role="menuitem" class="menu-link {% if request.endpoint == 'audit_logs' %}active{% endif %}">Audit Logs</a>
+            <a href="{{ url_for('prompt_versions_page') }}" role="menuitem" class="menu-link {% if request.endpoint == 'prompt_versions_page' %}active{% endif %}">Prompts</a>
+            {% if current_user.is_authenticated and current_user.is_admin %}
+            <a href="{{ url_for('admin_users') }}" role="menuitem" class="menu-link {% if request.endpoint == 'admin_users' %}active{% endif %}">Users</a>
+            {% endif %}
+            {% if current_user.is_authenticated %}
+            <div class="menu-sep"></div>
+            <div class="menu-item email">{{ current_user.email }}</div>
+            <form method="POST" action="{{ url_for('logout') }}" style="display:inline" role="menuitem">
+              <button type="submit" class="menu-link logout">Logout</button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
       </div>
     </div>
   </nav>
@@ -29,6 +49,25 @@
   <main class="container">
     {% block content %}{% endblock %}
   </main>
+
+    <script>
+      document.addEventListener('click', function (e) {
+        var trigger = e.target.closest('.settings-trigger');
+        if (trigger) {
+          var dropdown = trigger.closest('.settings-dropdown');
+          var isOpen = dropdown.classList.toggle('open');
+          trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+          return;
+        }
+        // close any open dropdown when clicking outside
+        var open = document.querySelector('.settings-dropdown.open');
+        if (open && !e.target.closest('.settings-dropdown')) {
+          open.classList.remove('open');
+          var t = open.querySelector('.settings-trigger');
+          if (t) t.setAttribute('aria-expanded', 'false');
+        }
+      });
+    </script>
 
 </body>
 </html>

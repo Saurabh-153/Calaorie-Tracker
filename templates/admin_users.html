@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Admin — Users{% endblock %}
+
+{% block content %}
+
+<div class="card">
+  <div class="section-label">User Management</div>
+  <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+    Total users: <strong>{{ users | length }}</strong>
+  </p>
+
+  {% if users %}
+  <div class="table-wrap">
+    <table class="log-table">
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Joined</th>
+          <th>Status</th>
+          <th style="text-align: center;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr>
+          <td>{{ user.email }}</td>
+          <td style="font-size: 0.85rem; color: var(--text-muted);">
+            {{ user.created_at | slice(0, 10) }}
+          </td>
+          <td>
+            {% if user.is_admin %}
+            <span style="background: var(--teal-light); color: var(--teal); padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.8rem; font-weight: 600;">Admin</span>
+            {% else %}
+            <span style="background: var(--bg); color: var(--text-muted); padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.8rem;">User</span>
+            {% endif %}
+          </td>
+          <td class="action-cell" style="text-align: center;">
+            <!-- Toggle admin status -->
+            <form method="POST" action="{{ url_for('make_user_admin', user_id=user.id) }}" style="display: inline;">
+              <input type="hidden" name="is_admin" value="{{ 'false' if user.is_admin else 'true' }}">
+              <button type="submit" class="btn-admin-toggle" title="{% if user.is_admin %}Remove admin{% else %}Make admin{% endif %}">
+                {% if user.is_admin %}
+                  ⭐
+                {% else %}
+                  ☆
+                {% endif %}
+              </button>
+            </form>
+            
+            <!-- Delete user -->
+            {% if current_user.email != user.email %}
+            <form method="POST" action="{{ url_for('delete_user_route', user_id=user.id) }}" style="display: inline;" onsubmit="return confirm('Delete user {{ user.email }}?');">
+              <button type="submit" class="btn-delete-user">🗑</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">No users found.</div>
+  {% endif %}
+</div>
+
+<style>
+.btn-admin-toggle {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  transition: color 0.15s;
+}
+.btn-admin-toggle:hover { color: var(--teal); }
+
+.btn-delete-user {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  margin-left: 0.5rem;
+  transition: color 0.15s;
+}
+.btn-delete-user:hover { color: var(--coral); }
+</style>
+
+{% endblock %}

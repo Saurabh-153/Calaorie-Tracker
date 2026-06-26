@@ -37,6 +37,7 @@ def init_db():
         conn.execute("""
             CREATE TABLE IF NOT EXISTS food_entries (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id     INTEGER NOT NULL,
                 date        TEXT    NOT NULL,
                 name        TEXT    NOT NULL,
                 calories    INTEGER NOT NULL,
@@ -46,12 +47,26 @@ def init_db():
                 timestamp   TEXT    NOT NULL
             )
         """)
+        # Migrate existing DBs that lack user_id column
+        try:
+            conn.execute("ALTER TABLE food_entries ADD COLUMN user_id INTEGER NOT NULL DEFAULT 1")
+        except Exception:
+            pass  # column already exists
         conn.execute("""
             CREATE TABLE IF NOT EXISTS daily_goals (
-                date          TEXT PRIMARY KEY,
-                calorie_goal  INTEGER NOT NULL
+                user_id       INTEGER NOT NULL,
+                date          TEXT    NOT NULL,
+                calorie_goal  INTEGER NOT NULL,
+                protein_goal  REAL    NOT NULL DEFAULT 0,
+                carbs_goal    REAL    NOT NULL DEFAULT 0,
+                PRIMARY KEY (user_id, date)
             )
         """)
+        # Migrate existing DBs that lack user_id column
+        try:
+            conn.execute("ALTER TABLE daily_goals ADD COLUMN user_id INTEGER NOT NULL DEFAULT 1")
+        except Exception:
+            pass  # column already exists
         conn.execute("""
             CREATE TABLE IF NOT EXISTS ai_response_audit_logs (
                 id               INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,6 +86,29 @@ def init_db():
                 is_active   INTEGER NOT NULL DEFAULT 0
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                email      TEXT    NOT NULL UNIQUE,
+                created_at TEXT    NOT NULL,
+                is_admin   INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+        # Migrate existing DBs that lack is_admin column
+        try:
+            conn.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0")
+        except Exception:
+            pass  # column already exists
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS otp_sessions (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                email      TEXT    NOT NULL,
+                code       TEXT    NOT NULL,
+                attempts   INTEGER NOT NULL DEFAULT 0,
+                expires_at TEXT    NOT NULL,
+                used       INTEGER NOT NULL DEFAULT 0
+            )
+        """)
 
 
 
@@ -79,14 +117,15 @@ def init_db():
 # ---------------------------------------------------------------------------
 
 
-def insert_entry(entry: FoodEntry) -> int:
+def insert_entry(entry: FoodEntry, user_id: int) -> int:
     """Insert a food entry and return its new row id."""
     with get_db() as conn:
         cur = conn.execute(
             """INSERT INTO food_entries
-               (date, name, calories, protein, carbs, fat, timestamp)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+               (user_id, date, name, calories, protein, carbs, fat, timestamp)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (
+                user_id,
                 entry.date,
                 entry.name,
                 entry.calories,
@@ -99,27 +138,27 @@ def insert_entry(entry: FoodEntry) -> int:
         return cur.lastrowid
 
 
-def delete_entry(entry_id: int):
-    """Delete a food entry by id."""
+def delete_entry(entry_id: int, user_id: int):
+    """Delete a food entry by id (only if owned by user)."""
     with get_db() as conn:
-        conn.execute("DELETE FROM food_entries WHERE id = ?", (entry_id,))
+        conn.execute("DELETE FROM food_entries WHERE id = ? AND user_id = ?", (entry_id, user_id))
 
 
-def get_entries_for_date(date: str) -> List[FoodEntry]:
-    """Return all food entries for a given date, ordered by timestamp."""
+def get_entries_for_date(date: str, user_id: int) -> List[FoodEntry]:
+    """Return all food entries for a given date and user, ordered by timestamp."""
     with get_db() as conn:
         rows = conn.execute(
-            "SELECT * FROM food_entries WHERE date = ? ORDER BY timestamp", (date,)
+            "SELECT * FROM food_entries WHERE date = ? AND user_id = ? ORDER BY timestamp", (date, user_id)
         ).fetchall()
     return [FoodEntry(**dict(r)) for r in rows]
 
 
-def get_entries_in_range(start_date: str, end_date: str) -> List[FoodEntry]:
-    """Return all food entries between two dates inclusive."""
+def get_entries_in_range(start_date: str, end_date: str, user_id: int) -> List[FoodEntry]:
+    """Return all food entries between two dates inclusive for a user."""
     with get_db() as conn:
         rows = conn.execute(
-            "SELECT * FROM food_entries WHERE date BETWEEN ? AND ? ORDER BY date, timestamp",
-            (start_date, end_date),
+            "SELECT * FROM food_entries WHERE date BETWEEN ? AND ? AND user_id = ? ORDER BY date, timestamp",
+            (start_date, end_date, user_id),
         ).fetchall()
     return [FoodEntry(**dict(r)) for r in rows]
 
@@ -129,43 +168,46 @@ def get_entries_in_range(start_date: str, end_date: str) -> List[FoodEntry]:
 # ---------------------------------------------------------------------------
 
 
-def upsert_goal(goal: DailyGoal):
-    """Insert or replace the calorie goal for a date (upsert)."""
+def upsert_goal(goal: DailyGoal, user_id: int):
+    """Insert or replace the goal for a date and user (upsert)."""
     with get_db() as conn:
         conn.execute(
-            """INSERT INTO daily_goals (date, calorie_goal)
-               VALUES (?, ?)
-               ON CONFLICT(date) DO UPDATE SET calorie_goal = excluded.calorie_goal""",
-            (goal.date, goal.calorie_goal),
+            """INSERT INTO daily_goals (user_id, date, calorie_goal, protein_goal, carbs_goal)
+               VALUES (?, ?, ?, ?, ?)
+               ON CONFLICT(user_id, date) DO UPDATE SET
+                 calorie_goal = excluded.calorie_goal,
+                 protein_goal = excluded.protein_goal,
+                 carbs_goal   = excluded.carbs_goal""",
+            (user_id, goal.date, goal.calorie_goal, goal.protein_goal, goal.carbs_goal),
         )
 
 
-def get_goal_for_date(date: str) -> Optional[DailyGoal]:
-    """Return the DailyGoal for a date, or None if not set."""
+def get_goal_for_date(date: str, user_id: int) -> Optional[DailyGoal]:
+    """Return the DailyGoal for a date and user, or None if not set."""
     with get_db() as conn:
         row = conn.execute(
-            "SELECT * FROM daily_goals WHERE date = ?", (date,)
+            "SELECT * FROM daily_goals WHERE date = ? AND user_id = ?", (date, user_id)
         ).fetchone()
     if row is None:
         return None
     return DailyGoal(**dict(row))
 
 
-def get_goals_in_range(start_date: str, end_date: str) -> List[DailyGoal]:
-    """Return all daily goal records within a date range."""
+def get_goals_in_range(start_date: str, end_date: str, user_id: int) -> List[DailyGoal]:
+    """Return all daily goal records within a date range for a user."""
     with get_db() as conn:
         rows = conn.execute(
-            "SELECT * FROM daily_goals WHERE date BETWEEN ? AND ? ORDER BY date",
-            (start_date, end_date),
+            "SELECT * FROM daily_goals WHERE date BETWEEN ? AND ? AND user_id = ? ORDER BY date",
+            (start_date, end_date, user_id),
         ).fetchall()
     return [DailyGoal(**dict(r)) for r in rows]
 
 
-def get_goal_for_date_or_default(date: str, default: int = 2000) -> DailyGoal:
-    """Return the goal for a date, falling back to a default if not set."""
-    goal = get_goal_for_date(date)
+def get_goal_for_date_or_default(date: str, user_id: int, default: int = 2000) -> DailyGoal:
+    """Return the goal for a date and user, falling back to a default if not set."""
+    goal = get_goal_for_date(date, user_id)
     if goal is None:
-        return DailyGoal(date=date, calorie_goal=default)
+        return DailyGoal(user_id=user_id, date=date, calorie_goal=default, protein_goal=0.0, carbs_goal=0.0)
     return goal
 
 
@@ -258,3 +300,95 @@ def update_prompt_version(version_id: int, name: str, content: str):
             "UPDATE prompt_versions SET name = ?, content = ? WHERE id = ?",
             (name, content, version_id),
         )
+
+
+# ---------------------------------------------------------------------------
+# User queries
+# ---------------------------------------------------------------------------
+
+def get_or_create_user(email: str) -> dict:
+    """Return the user row for email, creating it if it doesn't exist."""
+    from datetime import datetime
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+        if row:
+            return dict(row)
+        conn.execute(
+            "INSERT INTO users (email, created_at) VALUES (?, ?)",
+            (email, datetime.now().isoformat()),
+        )
+        row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+        return dict(row)
+
+
+def get_user_by_id(user_id: int) -> dict | None:
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        return dict(row) if row else None
+
+
+def get_all_users() -> List[dict]:
+    """Return all users ordered by created_at descending."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, email, created_at, is_admin FROM users ORDER BY created_at DESC"
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def set_user_admin(user_id: int, is_admin: bool):
+    """Set admin status for a user."""
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE users SET is_admin = ? WHERE id = ?",
+            (1 if is_admin else 0, user_id),
+        )
+
+
+def delete_user(user_id: int):
+    """Delete a user by id."""
+    with get_db() as conn:
+        conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+
+
+# ---------------------------------------------------------------------------
+# OTP session queries
+# ---------------------------------------------------------------------------
+
+def create_otp(email: str, code: str, expires_at: str) -> int:
+    """Insert a new OTP record and return its id."""
+    with get_db() as conn:
+        # Invalidate previous unused OTPs for this email
+        conn.execute("UPDATE otp_sessions SET used = 1 WHERE email = ? AND used = 0", (email,))
+        cur = conn.execute(
+            "INSERT INTO otp_sessions (email, code, expires_at) VALUES (?, ?, ?)",
+            (email, code, expires_at),
+        )
+        return cur.lastrowid
+
+
+def get_active_otp(email: str) -> dict | None:
+    """Return the latest unused, unexpired OTP row for email."""
+    from datetime import datetime
+    now = datetime.now().isoformat()
+    with get_db() as conn:
+        row = conn.execute(
+            """SELECT * FROM otp_sessions
+               WHERE email = ? AND used = 0 AND expires_at > ?
+               ORDER BY id DESC LIMIT 1""",
+            (email, now),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def increment_otp_attempts(otp_id: int) -> int:
+    """Bump attempt counter; return new count."""
+    with get_db() as conn:
+        conn.execute("UPDATE otp_sessions SET attempts = attempts + 1 WHERE id = ?", (otp_id,))
+        row = conn.execute("SELECT attempts FROM otp_sessions WHERE id = ?", (otp_id,)).fetchone()
+        return row["attempts"]
+
+
+def mark_otp_used(otp_id: int):
+    with get_db() as conn:
+        conn.execute("UPDATE otp_sessions SET used = 1 WHERE id = ?", (otp_id,))

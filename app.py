@@ -3,19 +3,58 @@
 import os
 import sys
 import json
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, flash
+from flask_login import (
+    LoginManager, UserMixin, login_user, logout_user,
+    login_required, current_user,
+)
 
 # Ensure the project root is on sys.path so local imports work when run directly
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import database as db
 from models import FoodEntry, DailyGoal, AiResponseAuditLog, PromptVersion
-from ai_config import get_provider, list_providers, ACTIVE_PROVIDER, set_active_provider
+from ai_config import get_provider, list_providers, ACTIVE_PROVIDER, set_active_provider, parse_food_with_fallback
+from auth import send_otp, verify_otp, SESSION_DAYS
 from datetime import datetime
 
 app = Flask(__name__)
+app.secret_key = os.getenv("SECRET_KEY", os.urandom(32))
+
+# ---------------------------------------------------------------------------
+# Flask-Login
+# ---------------------------------------------------------------------------
+
+login_manager = LoginManager(app)
+login_manager.login_view = "login"
+login_manager.login_message = "Please log in to continue."
+
+
+class User(UserMixin):
+    def __init__(self, user_row: dict):
+        self.id    = str(user_row["id"])
+        self.email = user_row["email"]
+        self.is_admin = bool(user_row.get("is_admin", 0))
+
+
+@login_manager.user_loader
+def load_user(user_id: str):
+    row = db.get_user_by_id(int(user_id))
+    return User(row) if row else None
+
+
+@app.template_filter("prev_day")
+def prev_day_filter(d: str) -> str:
+    """Return the ISO date string for the day before d."""
+    return (date.fromisoformat(d) - timedelta(days=1)).isoformat()
+
+
+@app.template_filter("next_day")
+def next_day_filter(d: str) -> str:
+    """Return the ISO date string for the day after d."""
+    return (date.fromisoformat(d) + timedelta(days=1)).isoformat()
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -90,48 +129,140 @@ def normalize_ai_result(result):
 
 
 # ---------------------------------------------------------------------------
+# Auth routes
+# ---------------------------------------------------------------------------
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        if not email:
+            flash("Please enter your email.", "error")
+            return render_template("login.html")
+        ok, msg = send_otp(email)
+        if not ok:
+            flash(msg, "error")
+            return render_template("login.html")
+        session["otp_email"] = email
+        return redirect(url_for("verify"))
+    return render_template("login.html")
+
+
+@app.route("/verify", methods=["GET", "POST"])
+def verify():
+    email = session.get("otp_email")
+    if not email:
+        return redirect(url_for("login"))
+    if request.method == "POST":
+        code = request.form.get("code", "").strip()
+        ok, msg = verify_otp(email, code)
+        if not ok:
+            flash(msg, "error")
+            return render_template("verify.html", email=email)
+        # Log the user in
+        row = db.get_or_create_user(email)
+        user = User(row)
+        login_user(user, remember=True, duration=timedelta(days=SESSION_DAYS))
+        session.pop("otp_email", None)
+        return redirect(url_for("index"))
+    return render_template("verify.html", email=email)
+
+
+@app.route("/logout", methods=["POST"])
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for("login"))
+
+
+# ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
 
 
 @app.route("/")
+@login_required
 def index():
-    """Main dashboard — today's food log, progress bar, and goal form."""
-    today = today_str()
-    entries = db.get_entries_for_date(today)
+    """Main dashboard — food log, progress bar, and goal form for a given date."""
+    selected_date = request.args.get("date", "").strip() or today_str()
+    entries = db.get_entries_for_date(selected_date, int(current_user.id))
     totals = daily_totals(entries)
-    goal = db.get_goal_for_date_or_default(today)
-    providers = list_providers()
+    goal = db.get_goal_for_date_or_default(selected_date, int(current_user.id))
     return render_template(
         "index.html",
-        today=today,
+        today=today_str(),
+        selected_date=selected_date,
         entries=entries,
         totals=totals,
         goal=goal,
-        providers=providers,
-        active_provider=ACTIVE_PROVIDER,
     )
 
 
 @app.route("/delete/<int:entry_id>", methods=["POST"])
+@login_required
 def delete_entry(entry_id: int):
     """Delete a food entry by id, then redirect back to dashboard."""
-    db.delete_entry(entry_id)
-    return redirect(url_for("index"))
+    date = request.form.get("date", "").strip() or today_str()
+    db.delete_entry(entry_id, int(current_user.id))
+    return redirect(url_for("index", date=date))
 
 
 @app.route("/goal", methods=["POST"])
+@login_required
 def save_goal():
-    """Save (upsert) the calorie goal for today, then redirect to dashboard."""
+    """Save (upsert) the calorie/protein/carbs goal for the submitted date."""
+    goal_date = request.form.get("goal_date", "").strip() or today_str()
     goal = DailyGoal(
-        date=today_str(),
+        user_id=int(current_user.id),
+        date=goal_date,
         calorie_goal=int(request.form.get("calorie_goal", 2000)),
+        protein_goal=float(request.form.get("protein_goal", 0) or 0),
+        carbs_goal=float(request.form.get("carbs_goal", 0) or 0),
     )
-    db.upsert_goal(goal)
-    return redirect(url_for("index"))
+    db.upsert_goal(goal, int(current_user.id))
+    return redirect(url_for("index", date=goal_date))
+
+
+@app.route("/api/goal/<date>")
+@login_required
+def api_get_goal(date: str):
+    """Return the goal for a specific date as JSON."""
+    goal = db.get_goal_for_date_or_default(date, int(current_user.id))
+    return jsonify({"date": date, "calorie_goal": goal.calorie_goal,
+                    "protein_goal": goal.protein_goal, "carbs_goal": goal.carbs_goal})
+
+
+@app.route("/api/day/<date>")
+@login_required
+def api_get_day(date: str):
+    """Return entries, totals, and goal for a date — used for in-place dashboard refresh."""
+    entries = db.get_entries_for_date(date, int(current_user.id))
+    totals = daily_totals(entries)
+    goal = db.get_goal_for_date_or_default(date, int(current_user.id))
+    return jsonify({
+        "date": date,
+        "goal_calorie": goal.calorie_goal,
+        "goal_protein": goal.protein_goal,
+        "goal_carbs": goal.carbs_goal,
+        "totals": totals,
+        "entries": [
+            {
+                "id": e.id,
+                "name": e.name,
+                "calories": e.calories,
+                "protein": e.protein,
+                "carbs": e.carbs,
+                "fat": e.fat,
+            }
+            for e in entries
+        ],
+    })
 
 
 @app.route("/history")
+@login_required
 def history():
     """
     Show recent history with weekly or monthly charting.
@@ -175,8 +306,8 @@ def history():
     start_date = start_dt.isoformat()
     end_date = end_dt.isoformat()
 
-    entries = db.get_entries_in_range(start_date, end_date)
-    goals_by_date = {goal.date: goal for goal in db.get_goals_in_range(start_date, end_date)}
+    entries = db.get_entries_in_range(start_date, end_date, int(current_user.id))
+    goals_by_date = {goal.date: goal for goal in db.get_goals_in_range(start_date, end_date, int(current_user.id))}
     entries_by_date = {}
     for entry in entries:
         entries_by_date.setdefault(entry.date, []).append(entry)
@@ -194,7 +325,7 @@ def history():
     for d in date_list:
         day_entries = entries_by_date.get(d, [])
         totals = daily_totals(day_entries)
-        goal = goals_by_date.get(d) or DailyGoal(date=d, calorie_goal=2000)
+        goal = goals_by_date.get(d) or DailyGoal(user_id=int(current_user.id), date=d, calorie_goal=2000, protein_goal=0.0, carbs_goal=0.0)
         if d == today_str():
             label = "Today"
             weekday_name = date.fromisoformat(d).strftime("%a")
@@ -221,7 +352,9 @@ def history():
     max_cal = max((d["totals"]["calories"] for d in days), default=0)
     goal_max = max((d["goal"].calorie_goal for d in days), default=2000)
     chart_max = max(max_cal, goal_max) or 1
-    goal_line = int(sum(d["goal"].calorie_goal for d in days) / len(days)) if days else 0
+    goal_line         = int(sum(d["goal"].calorie_goal for d in days) / len(days)) if days else 0
+    protein_goal_line = round(sum(d["goal"].protein_goal for d in days) / len(days), 1) if days else 0
+    carbs_goal_line   = round(sum(d["goal"].carbs_goal   for d in days) / len(days), 1) if days else 0
     total_calories = sum(d["totals"]["calories"] for d in days)
     average_calories = round(total_calories / len(days)) if days else 0
 
@@ -268,6 +401,8 @@ def history():
         weeks=weeks,
         chart_max=chart_max,
         goal_line=goal_line,
+        protein_goal_line=protein_goal_line,
+        carbs_goal_line=carbs_goal_line,
         view=view,
         summary={
             "total_calories": total_calories,
@@ -297,8 +432,9 @@ def api_today():
 
 
 @app.route("/api/parse-food", methods=["POST"])
+@login_required
 def api_parse_food():
-    """Parse natural language food description via AI provider."""
+    """Parse natural language food description via AI provider with automatic fallback."""
     data = request.get_json()
     if not data or "text" not in data:
         return jsonify({"error": "Missing 'text' field"}), 400
@@ -307,31 +443,33 @@ def api_parse_food():
     if not text:
         return jsonify({"error": "Empty text"}), 400
 
-    provider = get_provider()
-    result = provider.parse_food(text)
+    result, provider_name = parse_food_with_fallback(text)
     normalized = normalize_ai_result(result)
-    save_ai_response(normalized, text, provider.get_name())
+    save_ai_response(normalized, text, provider_name)
+    if "error" in normalized:
+        return jsonify(normalized), 503
     return jsonify(normalized)
 
 
 @app.route("/add-bulk", methods=["POST"])
+@login_required
 def add_bulk_entries():
-    """Add multiple food entries from parsed Gemini results."""
+    """Add multiple food entries from parsed AI results."""
     data = request.get_json()
     if not data or "items" not in data:
         return jsonify({"error": "Missing 'items' field"}), 400
 
+    entry_date = data.get("date", "").strip() or today_str()
     items = data["items"]
     added = []
     for item in items:
-        # Build entry name with portion info
         name = item.get("name", "Unnamed")
         portion = item.get("portion", "")
         display_name = f"{name} ({portion})" if portion else name
 
         entry = FoodEntry(
             id=None,
-            date=today_str(),
+            date=entry_date,
             name=display_name,
             calories=int(item.get("calories", 0)),
             protein=float(item.get("protein", 0)),
@@ -339,7 +477,7 @@ def add_bulk_entries():
             fat=float(item.get("fat", 0)),
             timestamp=now_iso(),
         )
-        entry_id = db.insert_entry(entry)
+        entry_id = db.insert_entry(entry, int(current_user.id))
         added.append({"id": entry_id, "name": display_name})
 
     return jsonify({"added": added, "count": len(added)})
@@ -375,6 +513,7 @@ def api_set_active_provider():
 
 
 @app.route("/admin/audit-logs")
+@login_required
 def audit_logs():
     """Render a small admin page showing recent AI response audit logs."""
     limit = request.args.get("limit", 50, type=int)
@@ -389,6 +528,7 @@ def audit_logs():
 
 
 @app.route("/api/audit-logs")
+@login_required
 def api_audit_logs():
     """Return recent AI response audit logs as JSON."""
     limit = request.args.get("limit", 50, type=int)
@@ -410,6 +550,7 @@ def api_audit_logs():
 
 
 @app.route("/admin/audit-logs/delete/<int:log_id>", methods=["POST"])
+@login_required
 def delete_audit_log(log_id: int):
     """Delete an AI response audit log entry."""
     db.delete_ai_response_log(log_id)
@@ -417,6 +558,7 @@ def delete_audit_log(log_id: int):
 
 
 @app.route("/admin/prompts")
+@login_required
 def prompt_versions_page():
     """Display all prompt versions and let the admin switch or edit them."""
     versions = db.get_prompt_versions()
@@ -430,6 +572,7 @@ def prompt_versions_page():
 
 
 @app.route("/admin/prompts", methods=["POST"])
+@login_required
 def save_prompt_version():
     """Create a new prompt version or update an existing one."""
     version_id = request.form.get("version_id")
@@ -451,6 +594,7 @@ def save_prompt_version():
 
 
 @app.route("/admin/prompts/activate/<int:version_id>", methods=["POST"])
+@login_required
 def activate_prompt_version(version_id: int):
     """Make a prompt version the active one."""
     db.set_active_prompt_version(version_id)
@@ -458,10 +602,68 @@ def activate_prompt_version(version_id: int):
 
 
 @app.route("/admin/prompts/delete/<int:version_id>", methods=["POST"])
+@login_required
 def delete_prompt_version(version_id: int):
     """Delete an old prompt version from the database."""
     db.delete_prompt_version(version_id)
     return redirect(url_for("prompt_versions_page"))
+
+
+# ---------------------------------------------------------------------------
+# Admin user management
+# ---------------------------------------------------------------------------
+
+def admin_required(f):
+    """Decorator to require admin access."""
+    from functools import wraps
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin:
+            flash("Admin access required.", "error")
+            return redirect(url_for("index"))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+@app.route("/admin/users")
+@login_required
+@admin_required
+def admin_users():
+    """Show all users (admin only)."""
+    users = db.get_all_users()
+    return render_template(
+        "admin_users.html",
+        today=today_str(),
+        users=users,
+    )
+
+
+@app.route("/admin/users/make-admin/<int:user_id>", methods=["POST"])
+@login_required
+@admin_required
+def make_user_admin(user_id: int):
+    """Make a user admin (admin only)."""
+    is_admin = request.form.get("is_admin", "false").lower() == "true"
+    db.set_user_admin(user_id, is_admin)
+    flash(f"User admin status updated.", "info")
+    return redirect(url_for("admin_users"))
+
+
+@app.route("/admin/users/delete/<int:user_id>", methods=["POST"])
+@login_required
+@admin_required
+def delete_user_route(user_id: int):
+    """Delete a user (admin only)."""
+    # Prevent deleting yourself
+    if int(current_user.id) == user_id:
+        flash("Cannot delete your own account.", "error")
+        return redirect(url_for("admin_users"))
+    
+    user = db.get_user_by_id(user_id)
+    if user:
+        db.delete_user(user_id)
+        flash(f"User {user['email']} deleted.", "info")
+    return redirect(url_for("admin_users"))
 
 
 # ---------------------------------------------------------------------------

@@ -82,7 +82,27 @@
             stroke="#E8614A" stroke-width="1.5"
             stroke-dasharray="6 4" />
       <text x="{{ pad_left + chart_w + 4 }}" y="{{ goal_y + 4 }}"
-            class="goal-label" fill="#E8614A" font-size="11">goal</text>
+            class="goal-label" fill="#E8614A" font-size="11">kcal goal</text>
+
+      {% if protein_goal_line > 0 %}
+        {% set prot_y = pad_top + chart_h * (1 - protein_goal_line / chart_max) %}
+        <line x1="{{ pad_left }}" y1="{{ prot_y }}"
+              x2="{{ pad_left + chart_w }}" y2="{{ prot_y }}"
+              stroke="#7C3AED" stroke-width="1.5"
+              stroke-dasharray="4 3" />
+        <text x="{{ pad_left + chart_w + 4 }}" y="{{ prot_y + 4 }}"
+              class="goal-label" fill="#7C3AED" font-size="11">P goal</text>
+      {% endif %}
+
+      {% if carbs_goal_line > 0 %}
+        {% set carbs_y = pad_top + chart_h * (1 - carbs_goal_line / chart_max) %}
+        <line x1="{{ pad_left }}" y1="{{ carbs_y }}"
+              x2="{{ pad_left + chart_w }}" y2="{{ carbs_y }}"
+              stroke="#F59E0B" stroke-width="1.5"
+              stroke-dasharray="4 3" />
+        <text x="{{ pad_left + chart_w + 4 }}" y="{{ carbs_y + 4 }}"
+              class="goal-label" fill="#F59E0B" font-size="11">C goal</text>
+      {% endif %}
 
       {% for day in days %}
         {% set cal = day.totals.calories %}
@@ -131,7 +151,7 @@
       {% for day in week %}
         {% if day %}
           {% set bubble_size = 16 + (day.totals.calories / chart_max * 24) if chart_max > 0 else 16 %}
-          <div class="calendar-cell{% if day.date == today %} today{% endif %}" title="Calories: {{ day.totals.calories }} kcal — Goal: {{ day.goal.calorie_goal }} kcal — Diff: {{ day.totals.calories - day.goal.calorie_goal }} kcal">
+          <div class="calendar-cell{% if day.date == today %} today{% endif %}" title="Calories: {{ day.totals.calories }} / {{ day.goal.calorie_goal }} kcal | Protein: {{ day.totals.protein }}g / {{ day.goal.protein_goal | int }}g | Carbs: {{ day.totals.carbs }}g / {{ day.goal.carbs_goal | int }}g">
             <div class="calendar-day-label">{{ '%02d' | format(day.date[-2:] | int) }}</div>
             <div class="calendar-bubble" style="width: {{ bubble_size }}px; height: {{ bubble_size }}px;">
               <span>{{ day.totals.calories }}</span>
@@ -155,6 +175,12 @@
     <span class="day-kcal {% if day.totals.calories > day.goal.calorie_goal %}text-coral{% endif %}">
       {{ day.totals.calories }} / {{ day.goal.calorie_goal }} kcal
     </span>
+    {% if day.goal.protein_goal > 0 %}
+    <span class="day-macro" style="color:#7C3AED">P: {{ day.totals.protein }}g / {{ day.goal.protein_goal | int }}g</span>
+    {% endif %}
+    {% if day.goal.carbs_goal > 0 %}
+    <span class="day-macro" style="color:#F59E0B">C: {{ day.totals.carbs }}g / {{ day.goal.carbs_goal | int }}g</span>
+    {% endif %}
   </div>
   {% if day.entries %}
   <div class="table-wrap">

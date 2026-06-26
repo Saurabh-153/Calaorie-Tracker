@@ -2,18 +2,25 @@
 
 {% block content %}
 
+<!-- ─── Date Navigator ──────────────────────────────────────────── -->
+<section class="card date-nav-card">
+  <div class="date-nav">
+    <a class="btn" href="{{ url_for('index', date=(selected_date | prev_day)) }}">&#8249;</a>
+    <input type="date" id="date-nav-input" value="{{ selected_date }}" max="2099-12-31"
+           class="input-date" onchange="navigateToDate(this.value)" />
+    {% if selected_date == today %}
+      <span class="date-today-badge">Today</span>
+    {% else %}
+      <a class="btn" href="{{ url_for('index') }}">Today</a>
+    {% endif %}
+    <a class="btn" href="{{ url_for('index', date=(selected_date | next_day)) }}">&#8250;</a>
+  </div>
+</section>
+
 <!-- ─── Natural Language Food Entry (AI) ──────────────────────────── -->
 <section class="card nl-card">
   <div class="nl-header">
     <h2 class="section-label">Add Food (AI-Powered)</h2>
-    <div class="provider-selector">
-      <label for="provider-select">AI Provider:</label>
-      <select id="provider-select" class="provider-dropdown" onchange="changeProvider()">
-        {% for provider in providers %}
-        <option value="{{ provider }}" {% if provider == active_provider %}selected{% endif %}>{{ provider }}</option>
-        {% endfor %}
-      </select>
-    </div>
   </div>
   <p class="nl-hint">Describe your meal in natural language, e.g. "1 roti, 1 cup dal, 100g rice" or "2 eggs with toast and coffee"</p>
   <div class="nl-input-row">
@@ -47,41 +54,42 @@
 </section>
 
 <!-- ─── Progress Bar ───────────────────────────────────────────────── -->
-<section class="card progress-card">
+<section class="card progress-card" id="progress-section">
   {% set pct = ((totals.calories / goal.calorie_goal) * 100) | round(0) | int if goal.calorie_goal > 0 else 0 %}
   {% set over = totals.calories > goal.calorie_goal %}
 
   <div class="progress-header">
-    <span class="big-number {% if over %}text-coral{% endif %}">{{ totals.calories }}</span>
-    <span class="progress-of">/ {{ goal.calorie_goal }} kcal</span>
-    <span class="progress-pct {% if over %}text-coral{% endif %}">{{ pct }}%</span>
+    <span id="prog-cal" class="big-number {% if over %}text-coral{% endif %}">{{ totals.calories }}</span>
+    <span class="progress-of">/ <span id="prog-goal">{{ goal.calorie_goal }}</span> kcal</span>
+    <span id="prog-pct" class="progress-pct {% if over %}text-coral{% endif %}">{{ pct }}%</span>
   </div>
 
   <div class="progress-track">
-    <div class="progress-fill {% if over %}fill-coral{% endif %}"
+    <div id="prog-bar" class="progress-fill {% if over %}fill-coral{% endif %}"
          style="width: {{ [pct, 100] | min }}%;"></div>
   </div>
 </section>
 
 <!-- ─── Macros Row ─────────────────────────────────────────────────── -->
-<section class="macros-row">
+<section class="macros-row" id="macros-section">
   <div class="macro-item">
     <span class="macro-label">PROTEIN</span>
-    <span class="macro-value">{{ totals.protein }}<small>g</small></span>
+    <span class="macro-value" id="macro-protein">{{ totals.protein }}<small>g</small></span>
   </div>
   <div class="macro-item">
     <span class="macro-label">CARBS</span>
-    <span class="macro-value">{{ totals.carbs }}<small>g</small></span>
+    <span class="macro-value" id="macro-carbs">{{ totals.carbs }}<small>g</small></span>
   </div>
   <div class="macro-item">
     <span class="macro-label">FAT</span>
-    <span class="macro-value">{{ totals.fat }}<small>g</small></span>
+    <span class="macro-value" id="macro-fat">{{ totals.fat }}<small>g</small></span>
   </div>
 </section>
 
 <!-- ─── Food Log Table ─────────────────────────────────────────────── -->
-<section class="card">
-  <h2 class="section-label">Today's Log</h2>
+<section class="card" id="log-section">
+  <h2 class="section-label">{% if selected_date == today %}Today's Log{% else %}Log for {{ selected_date }}{% endif %}</h2>
+  <div id="log-table-wrap">
   {% if entries %}
   <div class="table-wrap">
     <table class="log-table">
@@ -95,7 +103,7 @@
           <th></th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="log-tbody">
         {% for e in entries %}
         <tr>
           <td>{{ e.name }}</td>
@@ -106,6 +114,7 @@
           <td class="action-cell">
             <form method="POST" action="{{ url_for('delete_entry', entry_id=e.id) }}"
                   onsubmit="return confirm('Delete this entry?')">
+              <input type="hidden" name="date" value="{{ selected_date }}" />
               <button type="submit" class="btn-delete" title="Delete">&times;</button>
             </form>
           </td>
@@ -115,22 +124,48 @@
     </table>
   </div>
   {% else %}
-  <p class="empty-state">No entries yet today. Use the AI-powered input above to add your first meal.</p>
+  <p class="empty-state">No entries for this date. Use the AI-powered input above to add a meal.</p>
   {% endif %}
+  </div>
 </section>
 
 <!-- ─── Daily Goal Setter ──────────────────────────────────────────── -->
 <section class="card goal-card">
   <h2 class="section-label">Daily Goal</h2>
   <form method="POST" action="{{ url_for('save_goal') }}" class="goal-form">
-    <input type="number" name="calorie_goal" value="{{ goal.calorie_goal }}"
-           min="500" max="10000" required class="input-num" />
-    <span class="goal-unit">kcal / day</span>
-    <button type="submit" class="btn btn-teal">Save</button>
+    <input type="hidden" name="goal_date" value="{{ selected_date }}" />
+    <div class="goal-row">
+      <div class="goal-field">
+        <label class="goal-label">Calories</label>
+        <input type="number" id="goal-calories" name="calorie_goal" value="{{ goal.calorie_goal }}"
+               min="500" max="10000" required class="input-num" />
+        <span class="goal-unit">kcal</span>
+      </div>
+      <div class="goal-field">
+        <label class="goal-label">Protein</label>
+        <input type="number" id="goal-protein" name="protein_goal" value="{{ goal.protein_goal | int }}"
+               min="0" max="500" step="1" class="input-num" />
+        <span class="goal-unit">g</span>
+      </div>
+      <div class="goal-field">
+        <label class="goal-label">Carbs</label>
+        <input type="number" id="goal-carbs" name="carbs_goal" value="{{ goal.carbs_goal | int }}"
+               min="0" max="1000" step="1" class="input-num" />
+        <span class="goal-unit">g</span>
+      </div>
+      <button type="submit" class="btn btn-teal">Save</button>
+    </div>
   </form>
 </section>
 
 <script>
+// ─── Date navigation ─────────────────────────────────────────────────
+function navigateToDate(date) {
+  window.location.href = '/?date=' + date;
+}
+
+// ─── Goal date picker — removed (date navigator drives the date now) ──
+
 // ─── Natural Language Food Parsing ───────────────────────────────────
 let parsedItems = [];
 
@@ -217,20 +252,76 @@ async function addSelectedItems() {
 
   if (selected.length === 0) return;
 
+  const currentDate = '{{ selected_date }}';
+
   try {
     const resp = await fetch('/add-bulk', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({items: selected})
+      body: JSON.stringify({items: selected, date: currentDate})
     });
     const data = await resp.json();
     if (data.count > 0) {
-      // Reload the page to show updated totals
-      window.location.reload();
+      // Fetch fresh day data and update DOM in-place
+      const dayResp = await fetch('/api/day/' + currentDate);
+      const day = await dayResp.json();
+      updateDashboard(day, currentDate);
+      // Hide the AI results panel
+      document.getElementById('nl-results').style.display = 'none';
+      document.getElementById('nl-input').value = '';
+      parsedItems = [];
     }
   } catch (err) {
     alert('Failed to add items: ' + err.message);
   }
+}
+
+function updateDashboard(day, currentDate) {
+  const t = day.totals;
+  const goalCal = day.goal_calorie;
+  const pct = goalCal > 0 ? Math.round((t.calories / goalCal) * 100) : 0;
+  const over = t.calories > goalCal;
+
+  // Progress bar
+  document.getElementById('prog-cal').textContent = t.calories;
+  document.getElementById('prog-cal').className = 'big-number' + (over ? ' text-coral' : '');
+  document.getElementById('prog-goal').textContent = goalCal;
+  document.getElementById('prog-pct').textContent = pct + '%';
+  document.getElementById('prog-pct').className = 'progress-pct' + (over ? ' text-coral' : '');
+  const bar = document.getElementById('prog-bar');
+  bar.style.width = Math.min(pct, 100) + '%';
+  bar.className = 'progress-fill' + (over ? ' fill-coral' : '');
+
+  // Macros
+  document.getElementById('macro-protein').innerHTML = t.protein + '<small>g</small>';
+  document.getElementById('macro-carbs').innerHTML  = t.carbs   + '<small>g</small>';
+  document.getElementById('macro-fat').innerHTML    = t.fat     + '<small>g</small>';
+
+  // Food log table
+  const wrap = document.getElementById('log-table-wrap');
+  if (day.entries.length === 0) {
+    wrap.innerHTML = '<p class="empty-state">No entries for this date. Use the AI-powered input above to add a meal.</p>';
+    return;
+  }
+  let rows = '';
+  day.entries.forEach(e => {
+    rows += `<tr>
+      <td>${e.name}</td>
+      <td class="num">${e.calories}</td>
+      <td class="num">${e.protein}</td>
+      <td class="num">${e.carbs}</td>
+      <td class="num">${e.fat}</td>
+      <td class="action-cell">
+        <form method="POST" action="/delete/${e.id}" onsubmit="return confirm('Delete this entry?')">
+          <input type="hidden" name="date" value="${currentDate}" />
+          <button type="submit" class="btn-delete" title="Delete">&times;</button>
+        </form>
+      </td>
+    </tr>`;
+  });
+  wrap.innerHTML = `<div class="table-wrap"><table class="log-table">
+    <thead><tr><th>Food</th><th class="num">kcal</th><th class="num">P</th><th class="num">C</th><th class="num">F</th><th></th></tr></thead>
+    <tbody id="log-tbody">${rows}</tbody></table></div>`;
 }
 
 // Allow Ctrl+Enter to trigger parse
@@ -240,27 +331,7 @@ document.getElementById('nl-input').addEventListener('keydown', function(e) {
   }
 });
 
-// ─── Provider Selection ──────────────────────────────────────────────
-async function changeProvider() {
-  const provider = document.getElementById('provider-select').value;
-  
-  try {
-    const resp = await fetch('/api/providers/active', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({provider: provider})
-    });
-    const data = await resp.json();
-    
-    if (data.error) {
-      alert('Failed to change provider: ' + data.error);
-    } else {
-      console.log('Provider changed to:', data.active);
-    }
-  } catch (err) {
-    alert('Failed to change provider: ' + err.message);
-  }
-}
+
 </script>
 
 {% endblock %}
