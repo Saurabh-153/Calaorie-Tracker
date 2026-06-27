@@ -1,337 +1,372 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block content %}
 
-<!-- ─── Date Navigator ──────────────────────────────────────────── -->
-<section class="card date-nav-card">
-  <div class="date-nav">
-    <a class="btn" href="{{ url_for('index', date=(selected_date | prev_day)) }}">&#8249;</a>
-    <input type="date" id="date-nav-input" value="{{ selected_date }}" max="2099-12-31"
-           class="input-date" onchange="navigateToDate(this.value)" />
-    {% if selected_date == today %}
-      <span class="date-today-badge">Today</span>
-    {% else %}
-      <a class="btn" href="{{ url_for('index') }}">Today</a>
-    {% endif %}
-    <a class="btn" href="{{ url_for('index', date=(selected_date | next_day)) }}">&#8250;</a>
-  </div>
-</section>
+<!-- ─── Date Bar ──────────────────────────────────────────────────── -->
+<div class="date-bar">
+  <a class="date-nav-btn" href="{{ url_for('index', date=(selected_date | prev_day)) }}" aria-label="Previous day"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></a>
+  <input type="date" id="date-nav-input" class="date-input" value="{{ selected_date }}" max="2099-12-31" onchange="navigateToDate(this.value)" aria-label="Select date" />
+  {% if selected_date == today %}
+    <span class="today-pill">Today</span>
+  {% else %}
+    <a class="today-pill today-pill-link" href="{{ url_for('index') }}">Today</a>
+  {% endif %}
+  <a class="date-nav-btn" href="{{ url_for('index', date=(selected_date | next_day)) }}" aria-label="Next day"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></a>
+</div>
 
-<!-- ─── Natural Language Food Entry (AI) ──────────────────────────── -->
-<section class="card nl-card">
-  <div class="nl-header">
-    <h2 class="section-label">Add Food (AI-Powered)</h2>
+<!-- ─── AI Card ────────────────────────────────────────────────────── -->
+<div class="ai-card">
+  <div class="ai-header">
+    <div class="ai-icon"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3L13.5 8.5L19 10L13.5 11.5L12 17L10.5 11.5L5 10L10.5 8.5Z"/><path d="M5 3L5.8 5.2L8 6L5.8 6.8L5 9L4.2 6.8L2 6L4.2 5.2Z"/><path d="M19 15L19.6 16.9L21.5 17.5L19.6 18.1L19 20L18.4 18.1L16.5 17.5L18.4 16.9Z"/></svg></div>
+    <span class="ai-title">Add food (AI-powered)</span>
   </div>
-  <p class="nl-hint">Describe your meal in natural language, e.g. "1 roti, 1 cup dal, 100g rice" or "2 eggs with toast and coffee"</p>
-  <div class="nl-input-row">
-    <textarea id="nl-input" class="nl-textarea" placeholder="e.g. 2 eggs, 1 slice toast with butter, 1 cup coffee with milk" rows="2"></textarea>
-    <button id="nl-parse-btn" class="btn btn-teal" onclick="parseFood()">Parse & Add</button>
+  <div class="ai-subtitle">Describe your meal — "1 roti, 1 cup dal, 100g rice" or "2 eggs with toast"</div>
+  <div class="ai-row">
+    <textarea id="nl-input" class="ai-input" placeholder="e.g. 2 eggs, 1 slice toast with butter, 1 cup coffee with milk" aria-label="Describe your meal" rows="3"></textarea>
+    <button id="nl-parse-btn" class="parse-btn" onclick="parseFood()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8L19 13"/><path d="M15 9h.01"/><path d="M17.8 6.2L19 5"/><path d="M3 21l9-9"/><path d="M12.2 6.2L11 5"/></svg>Parse &amp; Add
+    </button>
   </div>
-  <div id="nl-loading" class="nl-loading" style="display:none;">
-    <span class="spinner"></span> Analyzing with AI...
-  </div>
+  <div id="nl-loading" class="nl-loading" style="display:none;"><svg class="spin" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.22-8.56"/></svg> Analyzing with AI…</div>
   <div id="nl-error" class="nl-error" style="display:none;"></div>
   <div id="nl-results" class="nl-results" style="display:none;">
-    <table class="log-table">
-      <thead>
-        <tr>
-          <th class="check-col"></th>
-          <th>Food</th>
-          <th>Portion</th>
-          <th class="num">kcal</th>
-          <th class="num">P</th>
-          <th class="num">C</th>
-          <th class="num">F</th>
-        </tr>
-      </thead>
+    <table class="log-table" style="margin-top:.75rem">
+      <thead><tr><th class="check-col"></th><th>Food</th><th>Portion</th><th class="num">kcal</th><th class="num">P</th><th class="num">C</th><th class="num">F</th></tr></thead>
       <tbody id="nl-results-body"></tbody>
     </table>
     <div class="nl-results-footer">
       <span id="nl-total" class="nl-total"></span>
-      <button class="btn btn-teal" onclick="addSelectedItems()">Add Selected to Log</button>
+      <button class="parse-btn" onclick="addSelectedItems()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Selected to Log</button>
     </div>
   </div>
-</section>
+</div>
 
-<!-- ─── Progress Bar ───────────────────────────────────────────────── -->
-<section class="card progress-card" id="progress-section">
-  {% set pct = ((totals.calories / goal.calorie_goal) * 100) | round(0) | int if goal.calorie_goal > 0 else 0 %}
-  {% set over = totals.calories > goal.calorie_goal %}
+<!-- ─── Summary Card ─────────────────────────────────────────────── -->
+{% set pct = ((totals.calories / goal.calorie_goal) * 100) | round(0) | int if goal.calorie_goal > 0 else 0 %}
+{% set over = totals.calories > goal.calorie_goal %}
+<div class="summary-card" id="progress-section">
+  <div class="cal-row">
+    <div>
+      <span id="prog-cal" class="cal-big{% if over %} text-red{% endif %}">{{ totals.calories }}</span>
+      <span class="cal-goal">/ <span id="prog-goal">{{ goal.calorie_goal }}</span> kcal</span>
+    </div>
+    <span id="prog-pct" class="cal-pct" style="color:{% if over %}#E24B4A{% else %}#1D9E75{% endif %}">{{ pct }}%</span>
+  </div>
+  <div class="prog-track">
+    <div id="prog-bar" class="prog-fill" style="width:{{ [pct,100]|min }}%;{% if over %}background:#E24B4A{% else %}background:linear-gradient(90deg,#1D9E75,#EF9F27){% endif %}"></div>
+  </div>
+  {% set pro_pct = ((totals.protein / goal.protein_goal) * 100)|round(0)|int if goal.protein_goal > 0 else 0 %}
+  {% set carb_pct = ((totals.carbs / goal.carbs_goal) * 100)|round(0)|int if goal.carbs_goal > 0 else 0 %}
+  {% set pro_over = totals.protein > goal.protein_goal and goal.protein_goal > 0 %}
+  {% set carb_over = totals.carbs > goal.carbs_goal and goal.carbs_goal > 0 %}
+  <div class="macro-grid" id="macros-section">
+    <div class="macro-tile">
+      <div class="macro-tile-label"><span class="macro-tile-dot" style="background:#7F77DD"></span>Protein</div>
+      <div><span class="macro-tile-val" id="macro-protein">{{ totals.protein }}</span><span class="macro-tile-unit">g</span></div>
+      <div class="macro-tile-sub{% if pro_over %} text-red{% endif %}" id="macro-protein-text">{% if goal.protein_goal > 0 %}{{ pro_pct }}% of {{ goal.protein_goal|int }}g goal{% else %}no protein goal{% endif %}</div>
+      <div class="mini-bar"><div class="mini-fill" id="macro-protein-bar" style="width:{{ [pro_pct,100]|min }}%;background:{% if pro_over %}#E24B4A{% else %}#7F77DD{% endif %}"></div></div>
+    </div>
+    <div class="macro-tile">
+      <div class="macro-tile-label"><span class="macro-tile-dot" style="background:#EF9F27"></span>Carbs</div>
+      <div><span class="macro-tile-val" id="macro-carbs">{{ totals.carbs }}</span><span class="macro-tile-unit">g</span></div>
+      <div class="macro-tile-sub{% if carb_over %} text-red{% endif %}" id="macro-carbs-text">{% if goal.carbs_goal > 0 %}{{ carb_pct }}% of {{ goal.carbs_goal|int }}g goal{% else %}no carbs goal{% endif %}</div>
+      <div class="mini-bar"><div class="mini-fill" id="macro-carbs-bar" style="width:{{ [carb_pct,100]|min }}%;background:{% if carb_over %}#E24B4A{% else %}#EF9F27{% endif %}"></div></div>
+    </div>
+    <div class="macro-tile">
+      <div class="macro-tile-label"><span class="macro-tile-dot" style="background:#888780"></span>Fat</div>
+      <div><span class="macro-tile-val" id="macro-fat">{{ totals.fat }}</span><span class="macro-tile-unit">g</span></div>
+      <div class="macro-tile-sub" id="macro-fat-text">no fat goal set</div>
+      <div class="mini-bar"><div class="mini-fill" id="macro-fat-bar" style="width:0%;background:#888780"></div></div>
+    </div>
+  </div>
+</div>
 
-  <div class="progress-header">
-    <span id="prog-cal" class="big-number {% if over %}text-coral{% endif %}">{{ totals.calories }}</span>
-    <span class="progress-of">/ <span id="prog-goal">{{ goal.calorie_goal }}</span> kcal</span>
-    <span id="prog-pct" class="progress-pct {% if over %}text-coral{% endif %}">{{ pct }}%</span>
+<!-- ─── Log Card ──────────────────────────────────────────────────── -->
+<div class="log-card" id="log-section">
+  <div class="log-top">
+    <span class="log-title"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1" fill="currentColor"/><circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="3" cy="18" r="1" fill="currentColor"/></svg>{% if selected_date == today %}Today's log{% else %}Log for {{ selected_date }}{% endif %}</span>
+    <div class="log-search-wrap">
+      <div class="log-search-inner">
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="food-search-input" placeholder="Search historic foods..." autocomplete="off" aria-label="Search foods" />
+      </div>
+      <div id="food-search-dropdown" class="search-dropdown" role="listbox" style="display:none;"></div>
+    </div>
+    <button class="log-meal-btn" id="log-meal-btn" type="button" onclick="logSelectedFoods()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Log this meal
+    </button>
   </div>
-
-  <div class="progress-track">
-    <div id="prog-bar" class="progress-fill {% if over %}fill-coral{% endif %}"
-         style="width: {{ [pct, 100] | min }}%;"></div>
+  <div id="selected-food-tags" class="selected-tags"></div>
+  <div id="search-selection-summary" class="search-selection-summary" style="display:none;"></div>
+  <div class="log-filter-row">
+    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+    <input type="text" id="log-filter-input" placeholder="Filter log entries..." autocomplete="off" />
   </div>
-</section>
-
-<!-- ─── Macros Row ─────────────────────────────────────────────────── -->
-<section class="macros-row" id="macros-section">
-  <div class="macro-item">
-    <span class="macro-label">PROTEIN</span>
-    <span class="macro-value" id="macro-protein">{{ totals.protein }}<small>g</small></span>
-  </div>
-  <div class="macro-item">
-    <span class="macro-label">CARBS</span>
-    <span class="macro-value" id="macro-carbs">{{ totals.carbs }}<small>g</small></span>
-  </div>
-  <div class="macro-item">
-    <span class="macro-label">FAT</span>
-    <span class="macro-value" id="macro-fat">{{ totals.fat }}<small>g</small></span>
-  </div>
-</section>
-
-<!-- ─── Food Log Table ─────────────────────────────────────────────── -->
-<section class="card" id="log-section">
-  <h2 class="section-label">{% if selected_date == today %}Today's Log{% else %}Log for {{ selected_date }}{% endif %}</h2>
   <div id="log-table-wrap">
   {% if entries %}
   <div class="table-wrap">
     <table class="log-table">
-      <thead>
-        <tr>
-          <th>Food</th>
-          <th class="num">kcal</th>
-          <th class="num">P</th>
-          <th class="num">C</th>
-          <th class="num">F</th>
-          <th></th>
-        </tr>
-      </thead>
+      <thead><tr><th style="width:44%">Food</th><th class="num" style="width:10%">kcal</th><th class="num" style="width:12%">Protein</th><th class="num" style="width:10%">Carbs</th><th class="num" style="width:10%">Fat</th><th style="width:14%"></th></tr></thead>
       <tbody id="log-tbody">
         {% for e in entries %}
-        <tr>
-          <td>{{ e.name }}</td>
-          <td class="num">{{ e.calories }}</td>
-          <td class="num">{{ e.protein }}</td>
-          <td class="num">{{ e.carbs }}</td>
-          <td class="num">{{ e.fat }}</td>
-          <td class="action-cell">
-            <form method="POST" action="{{ url_for('delete_entry', entry_id=e.id) }}"
-                  onsubmit="return confirm('Delete this entry?')">
-              <input type="hidden" name="date" value="{{ selected_date }}" />
-              <button type="submit" class="btn-delete" title="Delete">&times;</button>
-            </form>
-          </td>
+        {% set lname = e.name.lower() %}
+        {% if ' (' in e.name %}{% set main_name = e.name.split(' (')[0] %}{% set qty = '(' ~ e.name.split(' (', 1)[1] %}{% else %}{% set main_name = e.name %}{% set qty = '' %}{% endif %}
+        {% if 'egg' in lname or 'chicken' in lname or 'dal' in lname or 'fish' in lname or 'paneer' in lname or 'tofu' in lname or 'meat' in lname or 'whey' in lname %}{% set category = 'Protein' %}
+        {% elif 'rice' in lname or 'bread' in lname or 'roti' in lname or 'pasta' in lname or 'oats' in lname or 'cereal' in lname or 'grain' in lname or 'upma' in lname %}{% set category = 'Grains' %}
+        {% elif 'apple' in lname or 'banana' in lname or 'orange' in lname or 'fruit' in lname or 'berry' in lname or 'mango' in lname %}{% set category = 'Fruit' %}
+        {% elif 'salad' in lname or 'spinach' in lname or 'broccoli' in lname or 'vegetable' in lname or 'beans' in lname %}{% set category = 'Vegetable' %}
+        {% elif 'milk' in lname or 'yogurt' in lname or 'curd' in lname or 'cheese' in lname %}{% set category = 'Dairy' %}
+        {% else %}{% set category = 'Other' %}{% endif %}
+        <tr data-entry-id="{{ e.id }}">
+          <td><div class="fname">{{ main_name }}<span class="fcat">{{ category }}</span></div>{% if qty %}<div class="fqty">{{ qty }}</div>{% endif %}</td>
+          <td class="num vc">{{ e.calories }}</td>
+          <td class="num vp">{{ e.protein }}g</td>
+          <td class="num vb">{{ e.carbs }}g</td>
+          <td class="num vf">{{ e.fat }}g</td>
+          <td style="text-align:center"><button type="button" class="xbtn" onclick="deleteLogEntry(event, {{ e.id }})" aria-label="Remove {{ main_name }}"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></td>
         </tr>
         {% endfor %}
       </tbody>
+      <tfoot id="log-tfoot">
+        <tr>
+          <td><span class="tot-label">Total &middot; {{ entries|length }} item{{ 's' if entries|length != 1 else '' }}</span></td>
+          <td class="num tot-val vc">{{ totals.calories }}</td>
+          <td class="num tot-val vp">{{ totals.protein }}g</td>
+          <td class="num tot-val vb">{{ totals.carbs }}g</td>
+          <td class="num tot-val vf">{{ totals.fat }}g</td>
+          <td></td>
+        </tr>
+      </tfoot>
     </table>
   </div>
+  {% set bc = [[((totals.calories / goal.calorie_goal)*100)|round(0)|int,100]|min,0]|max if goal.calorie_goal > 0 else 0 %}
+  {% set bp = [[((totals.protein / goal.protein_goal)*100)|round(0)|int,100]|min,0]|max if goal.protein_goal > 0 else 0 %}
+  {% set bcarb = [[((totals.carbs / goal.carbs_goal)*100)|round(0)|int,100]|min,0]|max if goal.carbs_goal > 0 else 0 %}
+  {% set cal_ov = totals.calories > goal.calorie_goal %}
+  {% set pro_ov = totals.protein > goal.protein_goal and goal.protein_goal > 0 %}
+  {% set carb_ov = totals.carbs > goal.carbs_goal and goal.carbs_goal > 0 %}
+  <div class="bar-strip" id="bar-strip">
+    <div class="bs-item">
+      <div class="bs-label"><span>Calories</span><span id="bs-cal-label" style="color:{% if cal_ov %}#E24B4A{% else %}var(--text-muted){% endif %}">{{ totals.calories }}kcal / {{ goal.calorie_goal }}kcal</span></div>
+      <div class="bs-track"><div class="bs-fill" id="bs-cal-bar" style="width:{{ bc }}%;background:{% if cal_ov %}#E24B4A{% else %}#1D9E75{% endif %}"></div></div>
+    </div>
+    <div class="bs-item">
+      <div class="bs-label"><span>Protein</span><span id="bs-pro-label" style="color:{% if pro_ov %}#E24B4A{% else %}var(--text-muted){% endif %}">{{ totals.protein }}g / {{ goal.protein_goal|int }}g</span></div>
+      <div class="bs-track"><div class="bs-fill" id="bs-pro-bar" style="width:{{ bp }}%;background:{% if pro_ov %}#E24B4A{% else %}#7F77DD{% endif %}"></div></div>
+    </div>
+    <div class="bs-item">
+      <div class="bs-label"><span>Carbs</span><span id="bs-carb-label" style="color:{% if carb_ov %}#E24B4A{% else %}var(--text-muted){% endif %}">{{ totals.carbs }}g / {{ goal.carbs_goal|int }}g</span></div>
+      <div class="bs-track"><div class="bs-fill" id="bs-carb-bar" style="width:{{ bcarb }}%;background:{% if carb_ov %}#E24B4A{% else %}#EF9F27{% endif %}"></div></div>
+    </div>
+  </div>
   {% else %}
-  <p class="empty-state">No entries for this date. Use the AI-powered input above to add a meal.</p>
+  <p class="empty-state"><svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="display:block;margin:0 auto .6rem"><path d="M2 12h20"/><path d="M12 2a10 10 0 0 1 10 10"/><path d="M12 2a10 10 0 0 0-10 10"/><path d="M12 22v-4"/><path d="M8 22h8"/></svg>No entries for this date.<br>Use the AI input above to add a meal.</p>
   {% endif %}
   </div>
-</section>
+</div>
 
-<!-- ─── Daily Goal Setter ──────────────────────────────────────────── -->
-<section class="card goal-card">
-  <h2 class="section-label">Daily Goal</h2>
-  <form method="POST" action="{{ url_for('save_goal') }}" class="goal-form">
-    <input type="hidden" name="goal_date" value="{{ selected_date }}" />
-    <div class="goal-row">
-      <div class="goal-field">
-        <label class="goal-label">Calories</label>
-        <input type="number" id="goal-calories" name="calorie_goal" value="{{ goal.calorie_goal }}"
-               min="500" max="10000" required class="input-num" />
-        <span class="goal-unit">kcal</span>
-      </div>
-      <div class="goal-field">
-        <label class="goal-label">Protein</label>
-        <input type="number" id="goal-protein" name="protein_goal" value="{{ goal.protein_goal | int }}"
-               min="0" max="500" step="1" class="input-num" />
-        <span class="goal-unit">g</span>
-      </div>
-      <div class="goal-field">
-        <label class="goal-label">Carbs</label>
-        <input type="number" id="goal-carbs" name="carbs_goal" value="{{ goal.carbs_goal | int }}"
-               min="0" max="1000" step="1" class="input-num" />
-        <span class="goal-unit">g</span>
-      </div>
-      <button type="submit" class="btn btn-teal">Save</button>
+<!-- ─── Goal Card ─────────────────────────────────────────────────── -->
+<div class="goal-card">
+  <div class="goal-card-header">
+    <div class="goal-header">
+      <div class="goal-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
+      <div><div class="goal-title">Daily goal</div></div>
     </div>
+    <div class="saved-flash {% if goal_saved %}on{% endif %}" id="savedFlash">
+      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Goals saved
+    </div>
+  </div>
+  <div class="goal-sub">Keep your calories, protein, and carbs on track.</div>
+  <form method="POST" action="{{ url_for('save_goal') }}" id="goal-form">
+    <input type="hidden" name="goal_date" value="{{ selected_date }}" />
+    <div class="goal-grid">
+      <div class="goal-tile">
+        <div class="goal-tile-top"><span class="goal-dot" style="background:#1D9E75"></span><span class="goal-tile-name">Calories</span></div>
+        <div class="goal-target-label">Target</div>
+        <input class="goal-input" id="goal-calories" name="calorie_goal" type="number" value="{{ goal.calorie_goal }}" min="500" max="10000" required />
+        <div class="goal-unit">kcal</div>
+        <div class="goal-prog"><div class="goal-prog-fill" id="calories-progress"></div></div>
+        <div class="goal-prog-label" id="calories-progress-text"></div>
+      </div>
+      <div class="goal-tile">
+        <div class="goal-tile-top"><span class="goal-dot" style="background:#7F77DD"></span><span class="goal-tile-name">Protein</span></div>
+        <div class="goal-target-label">Target</div>
+        <input class="goal-input" id="goal-protein" name="protein_goal" type="number" value="{{ goal.protein_goal|int }}" min="0" max="500" step="1" />
+        <div class="goal-unit">g</div>
+        <div class="goal-prog"><div class="goal-prog-fill" id="protein-progress"></div></div>
+        <div class="goal-prog-label" id="protein-progress-text"></div>
+      </div>
+      <div class="goal-tile">
+        <div class="goal-tile-top"><span class="goal-dot" style="background:#EF9F27"></span><span class="goal-tile-name">Carbs</span></div>
+        <div class="goal-target-label">Target</div>
+        <input class="goal-input" id="goal-carbs" name="carbs_goal" type="number" value="{{ goal.carbs_goal|int }}" min="0" max="1000" step="1" />
+        <div class="goal-unit">g</div>
+        <div class="goal-prog"><div class="goal-prog-fill" id="carbs-progress"></div></div>
+        <div class="goal-prog-label" id="carbs-progress-text"></div>
+      </div>
+    </div>
+    <button type="submit" class="save-goals-btn">
+      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save goals
+    </button>
   </form>
-</section>
+</div>
 
 <script>
-// ─── Date navigation ─────────────────────────────────────────────────
-function navigateToDate(date) {
-  window.location.href = '/?date=' + date;
-}
+function navigateToDate(d) { window.location.href = '/?date=' + d; }
 
-// ─── Goal date picker — removed (date navigator drives the date now) ──
-
-// ─── Natural Language Food Parsing ───────────────────────────────────
-let parsedItems = [];
-
-async function parseFood() {
-  const input = document.getElementById('nl-input').value.trim();
-  if (!input) return;
-
-  // Show loading state
-  document.getElementById('nl-parse-btn').disabled = true;
-  document.getElementById('nl-loading').style.display = 'block';
-  document.getElementById('nl-error').style.display = 'none';
-  document.getElementById('nl-results').style.display = 'none';
-
+async function deleteLogEntry(event, entryId) {
+  event.preventDefault();
+  const cd = '{{ selected_date }}';
   try {
-    const resp = await fetch('/api/parse-food', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({text: input})
-    });
-
-    const rawText = await resp.text();
-    let data = {};
-    try {
-      data = rawText ? JSON.parse(rawText) : {};
-    } catch (parseErr) {
-      data = { error: `Server returned an invalid response: ${rawText.slice(0, 200)}` };
-    }
-
-    if (data.error) {
-      document.getElementById('nl-error').textContent = data.error;
-      document.getElementById('nl-error').style.display = 'block';
-    } else if (data.items && data.items.length > 0) {
-      const total = data.total || {
-        calories: data.total_calories || 0,
-        protein: data.total_protein || 0,
-        carbs: data.total_carbs || 0,
-        fat: data.total_fat || 0,
-      };
-      parsedItems = data.items;
-      renderParsedItems(data.items, total);
-      document.getElementById('nl-results').style.display = 'block';
-    } else {
-      document.getElementById('nl-error').textContent = 'No food items found in your description.';
-      document.getElementById('nl-error').style.display = 'block';
-    }
-  } catch (err) {
-    document.getElementById('nl-error').textContent = 'Request failed: ' + err.message;
-    document.getElementById('nl-error').style.display = 'block';
-  } finally {
-    document.getElementById('nl-parse-btn').disabled = false;
-    document.getElementById('nl-loading').style.display = 'none';
-  }
+    const r = await fetch('/delete/'+entryId,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'date='+encodeURIComponent(cd)});
+    if (!r.ok) throw new Error(await r.text()||'Delete failed');
+    const dr = await fetch('/api/day/'+cd);
+    if (!dr.ok) { window.location.reload(); return; }
+    updateDashboard(await dr.json(), cd);
+  } catch(err) { alert('Failed to delete: '+err.message); }
 }
 
-function renderParsedItems(items, total) {
-  const tbody = document.getElementById('nl-results-body');
-  tbody.innerHTML = '';
+function setGoalProg(barId, lblId, cur, target, unit, baseColor) {
+  const pct = target>0 ? Math.min(100,Math.round((cur/target)*100)) : 0;
+  const over = cur>target && target>0;
+  const bar = document.getElementById(barId), lbl = document.getElementById(lblId);
+  if (!bar||!lbl) return;
+  bar.style.width = pct+'%';
+  bar.style.background = over ? '#E24B4A' : baseColor;
+  lbl.textContent = target>0 ? `${Math.round((cur/target)*100)}% of ${target}${unit}${over?' — over!':''}` : 'No target set';
+  lbl.style.color = over ? '#E24B4A' : 'var(--text-muted)';
+}
 
-  items.forEach((item, idx) => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="check-col"><input type="checkbox" checked data-idx="${idx}" /></td>
-      <td>${item.name}</td>
-      <td class="portion-cell">${item.portion || '-'}</td>
-      <td class="num">${item.calories}</td>
-      <td class="num">${item.protein}</td>
-      <td class="num">${item.carbs}</td>
-      <td class="num">${item.fat}</td>
-    `;
-    tbody.appendChild(tr);
+function refreshGoalProgress() {
+  const cal=parseInt(document.getElementById('goal-calories').value)||0;
+  const pro=parseInt(document.getElementById('goal-protein').value)||0;
+  const carb=parseInt(document.getElementById('goal-carbs').value)||0;
+  setGoalProg('calories-progress','calories-progress-text',{{ totals.calories }},cal,' kcal','#1D9E75');
+  setGoalProg('protein-progress','protein-progress-text',{{ totals.protein }},pro,' g','#7F77DD');
+  setGoalProg('carbs-progress','carbs-progress-text',{{ totals.carbs }},carb,' g','#EF9F27');
+}
+
+function filterLogEntries() {
+  const q=(document.getElementById('log-filter-input').value||'').trim().toLowerCase();
+  document.querySelectorAll('#log-tbody tr').forEach(row=>{
+    row.style.display = q&&!row.textContent.toLowerCase().includes(q)?'none':'';
   });
-
-  document.getElementById('nl-total').innerHTML =
-    `<strong>Total:</strong> ${total.calories} kcal &nbsp;|&nbsp; P: ${total.protein}g &nbsp; C: ${total.carbs}g &nbsp; F: ${total.fat}g`;
 }
 
-async function addSelectedItems() {
-  const checkboxes = document.querySelectorAll('#nl-results-body input[type="checkbox"]:checked');
-  const selected = [];
-  checkboxes.forEach(cb => {
-    const idx = parseInt(cb.dataset.idx);
-    selected.push(parsedItems[idx]);
+document.addEventListener('DOMContentLoaded',()=>{
+  refreshGoalProgress();
+  const fi=document.getElementById('log-filter-input');
+  if(fi) fi.addEventListener('input',filterLogEntries);
+  ['goal-calories','goal-protein','goal-carbs'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.addEventListener('input',refreshGoalProgress);
   });
-
-  if (selected.length === 0) return;
-
-  const currentDate = '{{ selected_date }}';
-
-  try {
-    const resp = await fetch('/add-bulk', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({items: selected, date: currentDate})
-    });
-    const data = await resp.json();
-    if (data.count > 0) {
-      // Fetch fresh day data and update DOM in-place
-      const dayResp = await fetch('/api/day/' + currentDate);
-      const day = await dayResp.json();
-      updateDashboard(day, currentDate);
-      // Hide the AI results panel
-      document.getElementById('nl-results').style.display = 'none';
-      document.getElementById('nl-input').value = '';
-      parsedItems = [];
-    }
-  } catch (err) {
-    alert('Failed to add items: ' + err.message);
-  }
-}
-
-function updateDashboard(day, currentDate) {
-  const t = day.totals;
-  const goalCal = day.goal_calorie;
-  const pct = goalCal > 0 ? Math.round((t.calories / goalCal) * 100) : 0;
-  const over = t.calories > goalCal;
-
-  // Progress bar
-  document.getElementById('prog-cal').textContent = t.calories;
-  document.getElementById('prog-cal').className = 'big-number' + (over ? ' text-coral' : '');
-  document.getElementById('prog-goal').textContent = goalCal;
-  document.getElementById('prog-pct').textContent = pct + '%';
-  document.getElementById('prog-pct').className = 'progress-pct' + (over ? ' text-coral' : '');
-  const bar = document.getElementById('prog-bar');
-  bar.style.width = Math.min(pct, 100) + '%';
-  bar.className = 'progress-fill' + (over ? ' fill-coral' : '');
-
-  // Macros
-  document.getElementById('macro-protein').innerHTML = t.protein + '<small>g</small>';
-  document.getElementById('macro-carbs').innerHTML  = t.carbs   + '<small>g</small>';
-  document.getElementById('macro-fat').innerHTML    = t.fat     + '<small>g</small>';
-
-  // Food log table
-  const wrap = document.getElementById('log-table-wrap');
-  if (day.entries.length === 0) {
-    wrap.innerHTML = '<p class="empty-state">No entries for this date. Use the AI-powered input above to add a meal.</p>';
-    return;
-  }
-  let rows = '';
-  day.entries.forEach(e => {
-    rows += `<tr>
-      <td>${e.name}</td>
-      <td class="num">${e.calories}</td>
-      <td class="num">${e.protein}</td>
-      <td class="num">${e.carbs}</td>
-      <td class="num">${e.fat}</td>
-      <td class="action-cell">
-        <form method="POST" action="/delete/${e.id}" onsubmit="return confirm('Delete this entry?')">
-          <input type="hidden" name="date" value="${currentDate}" />
-          <button type="submit" class="btn-delete" title="Delete">&times;</button>
-        </form>
-      </td>
-    </tr>`;
-  });
-  wrap.innerHTML = `<div class="table-wrap"><table class="log-table">
-    <thead><tr><th>Food</th><th class="num">kcal</th><th class="num">P</th><th class="num">C</th><th class="num">F</th><th></th></tr></thead>
-    <tbody id="log-tbody">${rows}</tbody></table></div>`;
-}
-
-// Allow Ctrl+Enter to trigger parse
-document.getElementById('nl-input').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-    parseFood();
-  }
+  const fl=document.getElementById('savedFlash');
+  if(fl&&fl.classList.contains('on')) setTimeout(()=>fl.classList.remove('on'),2500);
 });
 
+let searchResults=[],selectedFoods=[],selectedIndex=-1,searchDebounceId=null;
+function highlightMatch(text,q){if(!q)return text;return text.replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'),'<span class="search-match">$1</span>');}
+function updateSearchSummary(){
+  const el=document.getElementById('search-selection-summary');
+  if(!selectedFoods.length){el.style.display='none';return;}
+  const t=selectedFoods.reduce((a,i)=>({calories:a.calories+i.calories,protein:a.protein+i.protein,carbs:a.carbs+i.carbs,fat:a.fat+i.fat}),{calories:0,protein:0,carbs:0,fat:0});
+  el.style.display='block';
+  el.innerHTML=`Selected ${selectedFoods.length} item${selectedFoods.length>1?'s':''} \u2014 ${t.calories} kcal \u00b7 P: ${t.protein}g \u00b7 C: ${t.carbs}g \u00b7 F: ${t.fat}g`;
+}
+function renderSelectedTags(){
+  const el=document.getElementById('selected-food-tags');
+  el.style.display=selectedFoods.length?'flex':'none';
+  el.innerHTML=selectedFoods.map((item,idx)=>`<span class="tag-pill">${item.name} <strong>${item.calories} kcal</strong><button type="button" class="tag-remove" onclick="removeSelectedFood(${idx})">&times;</button></span>`).join('');
+  updateSearchSummary();
+}
+function removeSelectedFood(i){selectedFoods.splice(i,1);renderSelectedTags();}
+function openDD(){document.getElementById('food-search-dropdown').style.display='block';}
+function closeDD(){document.getElementById('food-search-dropdown').style.display='none';selectedIndex=-1;}
+function renderSearchResults(q){
+  const dd=document.getElementById('food-search-dropdown');
+  if(!searchResults.length){dd.innerHTML='<div class="search-item">No matches found</div>';openDD();return;}
+  dd.innerHTML=searchResults.map((item,i)=>`<div class="search-item${i===selectedIndex?' selected':''}" onclick="chooseSearchResult(${i})"><span>${highlightMatch(item.name,q)}</span><span class="search-cal">${item.calories} kcal</span></div>`).join('');
+  openDD();
+}
+function chooseSearchResult(i){if(!searchResults[i])return;selectedFoods.push({...searchResults[i]});renderSelectedTags();closeDD();document.getElementById('food-search-input').value='';}
+async function searchFoodHistory(q){
+  if(!q){searchResults=[];closeDD();return;}
+  try{const r=await fetch('/api/food-search?q='+encodeURIComponent(q));if(!r.ok)return;searchResults=(await r.json()).items||[];selectedIndex=0;renderSearchResults(q);}catch(e){}
+}
+function onSearchInput(e){clearTimeout(searchDebounceId);searchDebounceId=setTimeout(()=>searchFoodHistory(e.target.value.trim()),150);}
+function onSearchKeyDown(e){
+  const dd=document.getElementById('food-search-dropdown');if(dd.style.display==='none')return;
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();selectedIndex=e.key==='ArrowDown'?(selectedIndex+1)%searchResults.length:(selectedIndex-1+searchResults.length)%searchResults.length;renderSearchResults(document.getElementById('food-search-input').value.trim());}
+  else if(e.key==='Enter'){e.preventDefault();chooseSearchResult(selectedIndex);}
+  else if(e.key==='Escape')closeDD();
+}
+async function logSelectedFoods(){
+  if(!selectedFoods.length)return;
+  const cd='{{ selected_date }}';
+  try{const r=await fetch('/add-bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:selectedFoods,date:cd})});
+    if(!r.ok)throw new Error('Server error '+r.status);
+    if((await r.json()).count>0){selectedFoods=[];renderSelectedTags();const dr=await fetch('/api/day/'+cd);if(!dr.ok){window.location.reload();return;}updateDashboard(await dr.json(),cd);}
+  }catch(err){alert('Failed to log meal: '+err.message);}
+}
+document.getElementById('food-search-input').addEventListener('input',onSearchInput);
+document.getElementById('food-search-input').addEventListener('keydown',onSearchKeyDown);
+document.addEventListener('click',e=>{const dd=document.getElementById('food-search-dropdown');if(!dd.contains(e.target)&&e.target!==document.getElementById('food-search-input'))closeDD();});
 
+let parsedItems=[];
+async function parseFood(){
+  const input=document.getElementById('nl-input').value.trim();if(!input)return;
+  document.getElementById('nl-parse-btn').disabled=true;
+  document.getElementById('nl-loading').style.display='block';
+  document.getElementById('nl-error').style.display='none';
+  document.getElementById('nl-results').style.display='none';
+  try{
+    const r=await fetch('/api/parse-food',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:input})});
+    let data;try{data=JSON.parse(await r.text());}catch(e){data={error:'Invalid server response'};}
+    if(data.error){document.getElementById('nl-error').textContent=data.error;document.getElementById('nl-error').style.display='block';}
+    else if(data.items?.length){parsedItems=data.items;renderParsedItems(data.items,data.total||{calories:data.total_calories||0,protein:data.total_protein||0,carbs:data.total_carbs||0,fat:data.total_fat||0});document.getElementById('nl-results').style.display='block';}
+    else{document.getElementById('nl-error').textContent='No food items found.';document.getElementById('nl-error').style.display='block';}
+  }catch(err){document.getElementById('nl-error').textContent='Request failed: '+err.message;document.getElementById('nl-error').style.display='block';}
+  finally{document.getElementById('nl-parse-btn').disabled=false;document.getElementById('nl-loading').style.display='none';}
+}
+function renderParsedItems(items,total){
+  document.getElementById('nl-results-body').innerHTML=items.map((item,idx)=>`<tr><td class="check-col"><input type="checkbox" checked data-idx="${idx}"/></td><td>${item.name}</td><td>${item.portion||'—'}</td><td class="num">${item.calories}</td><td class="num">${item.protein}</td><td class="num">${item.carbs}</td><td class="num">${item.fat}</td></tr>`).join('');
+  document.getElementById('nl-total').innerHTML=`<strong>Total:</strong> ${total.calories} kcal &nbsp;|&nbsp; P: ${total.protein}g &nbsp;C: ${total.carbs}g &nbsp;F: ${total.fat}g`;
+}
+async function addSelectedItems(){
+  const selected=[...document.querySelectorAll('#nl-results-body input[type="checkbox"]:checked')].map(cb=>parsedItems[+cb.dataset.idx]);
+  if(!selected.length)return;
+  const cd='{{ selected_date }}';
+  try{const r=await fetch('/add-bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:selected,date:cd})});
+    if(r.status===401||r.redirected){window.location.href='/login';return;}
+    if(!r.ok)throw new Error('Server error '+r.status);
+    if((await r.json()).count>0){const dr=await fetch('/api/day/'+cd);if(!dr.ok){window.location.reload();return;}updateDashboard(await dr.json(),cd);document.getElementById('nl-results').style.display='none';document.getElementById('nl-input').value='';parsedItems=[];}
+  }catch(err){alert('Failed to add items: '+err.message);}
+}
+document.getElementById('nl-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))parseFood();});
+
+function updateDashboard(day,currentDate){
+  const t=day.totals,goalCal=day.goal_calorie;
+  const pct=goalCal>0?Math.round((t.calories/goalCal)*100):0,over=t.calories>goalCal;
+  document.getElementById('prog-cal').textContent=t.calories;
+  document.getElementById('prog-cal').className='cal-big'+(over?' text-red':'');
+  document.getElementById('prog-goal').textContent=goalCal;
+  document.getElementById('prog-pct').textContent=pct+'%';
+  document.getElementById('prog-pct').style.color=over?'#E24B4A':'#1D9E75';
+  const bar=document.getElementById('prog-bar');
+  bar.style.width=Math.min(pct,100)+'%';
+  bar.style.background=over?'#E24B4A':'linear-gradient(90deg,#1D9E75,#EF9F27)';
+  document.getElementById('macro-protein').textContent=t.protein;
+  document.getElementById('macro-carbs').textContent=t.carbs;
+  document.getElementById('macro-fat').textContent=t.fat;
+  const wrap=document.getElementById('log-table-wrap');
+  if(!day.entries.length){wrap.innerHTML='<p class="empty-state"><svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="display:block;margin:0 auto .6rem"><path d="M2 12h20"/><path d="M12 2a10 10 0 0 1 10 10"/><path d="M12 2a10 10 0 0 0-10 10"/><path d="M12 22v-4"/><path d="M8 22h8"/></svg>No entries for this date.</p>';return;}
+  const rows=day.entries.map(e=>`<tr data-entry-id="${e.id}"><td><div class="fname">${e.name}</div></td><td class="num vc">${e.calories}</td><td class="num vp">${e.protein}g</td><td class="num vb">${e.carbs}g</td><td class="num vf">${e.fat}g</td><td style="text-align:center"><button type="button" class="xbtn" onclick="deleteLogEntry(event,${e.id})"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></td></tr>`).join('');
+  const calOv=t.calories>goalCal,proOv=t.protein>day.goal_protein&&day.goal_protein>0,carbOv=t.carbs>day.goal_carbs&&day.goal_carbs>0;
+  const bcCal=goalCal>0?Math.min(100,Math.round((t.calories/goalCal)*100)):0;
+  const bcPro=day.goal_protein>0?Math.min(100,Math.round((t.protein/day.goal_protein)*100)):0;
+  const bcCarb=day.goal_carbs>0?Math.min(100,Math.round((t.carbs/day.goal_carbs)*100)):0;
+  wrap.innerHTML=`<div class="table-wrap"><table class="log-table"><thead><tr><th style="width:44%">Food</th><th class="num" style="width:10%">kcal</th><th class="num" style="width:12%">Protein</th><th class="num" style="width:10%">Carbs</th><th class="num" style="width:10%">Fat</th><th style="width:14%"></th></tr></thead><tbody id="log-tbody">${rows}</tbody><tfoot id="log-tfoot"><tr><td><span class="tot-label">Total &middot; ${day.entries.length} item${day.entries.length!==1?'s':''}</span></td><td class="num tot-val vc">${t.calories}</td><td class="num tot-val vp">${t.protein}g</td><td class="num tot-val vb">${t.carbs}g</td><td class="num tot-val vf">${t.fat}g</td><td></td></tr></tfoot></table></div><div class="bar-strip" id="bar-strip"><div class="bs-item"><div class="bs-label"><span>Calories</span><span id="bs-cal-label" style="color:${calOv?'#E24B4A':'var(--text-muted)'}">${t.calories}kcal / ${goalCal}kcal</span></div><div class="bs-track"><div class="bs-fill" style="width:${bcCal}%;background:${calOv?'#E24B4A':'#1D9E75'}"></div></div></div><div class="bs-item"><div class="bs-label"><span>Protein</span><span style="color:${proOv?'#E24B4A':'var(--text-muted)'}">${t.protein}g / ${day.goal_protein}g</span></div><div class="bs-track"><div class="bs-fill" style="width:${bcPro}%;background:${proOv?'#E24B4A':'#7F77DD'}"></div></div></div><div class="bs-item"><div class="bs-label"><span>Carbs</span><span style="color:${carbOv?'#E24B4A':'var(--text-muted)'}">${t.carbs}g / ${day.goal_carbs}g</span></div><div class="bs-track"><div class="bs-fill" style="width:${bcCarb}%;background:${carbOv?'#E24B4A':'#EF9F27'}"></div></div></div></div>`;
+}
 </script>
 
 {% endblock %}

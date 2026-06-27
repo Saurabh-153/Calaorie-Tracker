@@ -5,39 +5,56 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}CalTrack{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.x/tabler-icons.min.css" />
 </head>
 <body>
 
   <!-- Sticky top navigation -->
   <nav class="topnav">
     <div class="nav-inner">
-      <span class="brand">CalTrack</span>
-      <span class="nav-date">{{ today }}</span>
+      <div class="brand">
+        <span class="brand-dot"></span>
+        <span class="brand-name">CalTrack</span>
+        <span class="brand-date">{{ today }}</span>
+      </div>
       <div class="nav-links">
-        <a href="{{ url_for('index') }}"
-           class="{% if request.endpoint == 'index' %}active{% endif %}">Dashboard</a>
-        <a href="{{ url_for('history') }}"
-           class="{% if request.endpoint == 'history' %}active{% endif %}">History</a>
-        <!-- Settings dropdown (gear) -->
+        <a href="{{ url_for('index') }}" class="nav-btn {% if request.endpoint == 'index' %}active{% endif %}">Dashboard</a>
+        <a href="{{ url_for('history') }}" class="nav-btn {% if request.endpoint == 'history' %}active{% endif %}">History</a>
         <div class="settings-dropdown">
-          <button class="settings-trigger" aria-expanded="false" title="Settings">
-            <!-- simple gear icon -->
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <path d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06A2 2 0 1 1 4.27 16.9l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09c.7 0 1.34-.39 1.51-1a1.65 1.65 0 0 0-.33-1.82L4.27 3.73A2 2 0 1 1 7.1.9l.06.06a1.65 1.65 0 0 0 1.82.33h.09C9.97 1.29 10.61 1 11.3 1H12.7c.69 0 1.33.29 1.82.69h.09a1.65 1.65 0 0 0 1.82-.33l.06-.06A2 2 0 1 1 19.73 3.73l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09c.2.6.8 1 1.51 1H21a2 2 0 1 1 0 4h-.09c-.7 0-1.34.39-1.51 1z" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+          <button class="nav-icon settings-trigger" aria-expanded="false" title="Settings">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                 aria-hidden="true">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
             </svg>
           </button>
           <div class="settings-menu" role="menu">
-            <a href="{{ url_for('audit_logs') }}" role="menuitem" class="menu-link {% if request.endpoint == 'audit_logs' %}active{% endif %}">Audit Logs</a>
-            <a href="{{ url_for('prompt_versions_page') }}" role="menuitem" class="menu-link {% if request.endpoint == 'prompt_versions_page' %}active{% endif %}">Prompts</a>
+            <a href="{{ url_for('audit_logs') }}" role="menuitem" class="menu-link {% if request.endpoint == 'audit_logs' %}active{% endif %}">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/><path d="M13 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5"/><circle cx="12" cy="12" r="2"/><line x1="12" y1="10" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="14"/></svg>
+              Audit Logs
+            </a>
+            <a href="{{ url_for('prompt_versions_page') }}" role="menuitem" class="menu-link {% if request.endpoint == 'prompt_versions_page' %}active{% endif %}">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="9" y1="10" x2="15" y2="10"/></svg>
+              Prompts
+            </a>
             {% if current_user.is_authenticated and current_user.is_admin %}
-            <a href="{{ url_for('admin_users') }}" role="menuitem" class="menu-link {% if request.endpoint == 'admin_users' %}active{% endif %}">Users</a>
+            <a href="{{ url_for('admin_users') }}" role="menuitem" class="menu-link {% if request.endpoint == 'admin_users' %}active{% endif %}">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Users
+            </a>
             {% endif %}
             {% if current_user.is_authenticated %}
             <div class="menu-sep"></div>
-            <div class="menu-item email">{{ current_user.email }}</div>
+            <div class="menu-item email">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              {{ current_user.email }}
+            </div>
             <form method="POST" action="{{ url_for('logout') }}" style="display:inline" role="menuitem">
-              <button type="submit" class="menu-link logout">Logout</button>
+              <button type="submit" class="menu-link logout">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Logout
+              </button>
             </form>
             {% endif %}
           </div>

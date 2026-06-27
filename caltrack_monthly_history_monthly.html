@@ -1,0 +1,313 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);background:var(--surface-0)}
+.page{max-width:860px;margin:0 auto;padding:0 0 2rem}
+.topnav{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--surface-2);border-bottom:0.5px solid var(--border)}
+.brand{display:flex;align-items:center;gap:8px}
+.brand-name{font-size:16px;font-weight:500;color:var(--text-primary)}
+.brand-dot{width:8px;height:8px;border-radius:50%;background:#1D9E75}
+.brand-date{font-size:12px;color:var(--text-muted);margin-left:4px}
+.nav-links{display:flex;align-items:center;gap:4px}
+.nav-btn{padding:6px 14px;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text-secondary)}
+.nav-btn.active{background:#1D9E75;color:#fff}
+.nav-btn:hover:not(.active){background:var(--surface-1)}
+.nav-icon{background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;padding:4px}
+.content{padding:16px 20px;display:flex;flex-direction:column;gap:16px}
+.history-header{display:flex;align-items:center;justify-content:space-between}
+.history-title{font-size:18px;font-weight:500;color:var(--text-primary);display:flex;align-items:center;gap:8px}
+.toggle-group{display:flex;background:var(--surface-1);border:0.5px solid var(--border);border-radius:var(--radius);padding:2px;gap:2px}
+.toggle-btn{padding:5px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text-secondary)}
+.toggle-btn.active{background:#1D9E75;color:#fff}
+.stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.stat-tile{background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:14px 16px}
+.stat-label{font-size:10px;font-weight:500;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:5px}
+.stat-val{font-size:22px;font-weight:500;color:var(--text-primary)}
+.stat-unit{font-size:12px;color:var(--text-muted);font-weight:400}
+.stat-sub{font-size:11px;color:var(--text-muted);margin-top:3px}
+
+.cal-card{background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;overflow:hidden}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:0.5px solid var(--border)}
+.cal-nav-btn{background:none;border:0.5px solid var(--border);border-radius:var(--radius);cursor:pointer;color:var(--text-secondary);width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.cal-nav-btn:hover{background:var(--surface-1)}
+.cal-month{font-size:15px;font-weight:500;color:var(--text-primary)}
+.cal-legend{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--text-muted)}
+.leg-swatch{width:12px;height:12px;border-radius:2px;display:inline-block}
+
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-left:0.5px solid var(--border);border-top:0.5px solid var(--border)}
+.dow-header{padding:8px 4px;text-align:center;font-size:10px;font-weight:500;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;border-right:0.5px solid var(--border);border-bottom:0.5px solid var(--border);background:var(--surface-1)}
+.cal-cell{border-right:0.5px solid var(--border);border-bottom:0.5px solid var(--border);padding:8px 8px 10px;min-height:76px;cursor:pointer;position:relative;transition:background 0.1s}
+.cal-cell:hover{background:var(--surface-1)}
+.cal-cell.empty{background:var(--surface-1);cursor:default}
+.cal-cell.empty:hover{background:var(--surface-1)}
+.cal-cell.today{outline:2px solid #1D9E75;outline-offset:-2px;border-radius:0}
+.cal-cell.selected{background:#E1F5EE}
+.cell-date{font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:6px}
+.cal-cell.today .cell-date{color:#1D9E75;font-weight:500}
+.cell-bar-wrap{height:4px;background:var(--surface-1);border-radius:2px;margin-bottom:5px;overflow:hidden}
+.cell-bar{height:100%;border-radius:2px;transition:width 0.3s}
+.cell-cal{font-size:11px;font-weight:500;color:var(--text-primary)}
+.cell-cal.zero{color:var(--text-muted);font-weight:400}
+.cell-dot{width:5px;height:5px;border-radius:50%;position:absolute;top:8px;right:8px}
+
+.detail-panel{background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;overflow:hidden}
+.detail-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:0.5px solid var(--border);background:var(--surface-1)}
+.detail-date{font-size:14px;font-weight:500;color:var(--text-primary)}
+.detail-kcal{font-size:13px;color:var(--text-muted)}
+.detail-badges{display:flex;gap:6px}
+.dbadge{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500}
+.dbadge-ok{background:#E1F5EE;color:#0F6E56}
+.dbadge-over{background:#FCEBEB;color:#A32D2D}
+.dbadge-empty{background:var(--surface-1);color:var(--text-muted);border:0.5px solid var(--border)}
+.no-entries{padding:16px;font-size:13px;color:var(--text-muted);font-style:italic}
+table.dtbl{width:100%;border-collapse:collapse}
+table.dtbl th{padding:8px 14px;font-size:10px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-muted);text-align:left;background:var(--surface-1);border-bottom:0.5px solid var(--border)}
+table.dtbl th.r{text-align:right}
+table.dtbl td{padding:10px 14px;font-size:13px;border-bottom:0.5px solid var(--border);vertical-align:middle}
+table.dtbl tbody tr:last-child td{border-bottom:none}
+table.dtbl tbody tr:hover td{background:var(--surface-1)}
+.fn{font-weight:500;color:var(--text-primary)}
+.fq{font-size:11px;color:var(--text-muted);margin-top:1px}
+.nr{text-align:right;font-variant-numeric:tabular-nums}
+.vc{color:var(--text-primary);font-weight:500}.vp{color:#7F77DD}.vb{color:#EF9F27}.vf{color:var(--text-secondary)}
+table.dtbl tfoot td{background:var(--surface-1);border-top:0.5px solid var(--border-strong);font-size:13px;font-weight:500;padding:10px 14px}
+.macro-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border-top:0.5px solid var(--border)}
+.ms-item{padding:12px 16px;text-align:center;border-right:0.5px solid var(--border)}
+.ms-item:last-child{border-right:none}
+.ms-label{font-size:10px;font-weight:500;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px}
+.ms-val{font-size:16px;font-weight:500}
+</style>
+
+<div class="page">
+  <h2 class="sr-only">CalTrack monthly history view</h2>
+  <nav class="topnav">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <span class="brand-name">CalTrack</span>
+      <span class="brand-date">2026-06-27</span>
+    </div>
+    <div class="nav-links">
+      <button class="nav-btn">Dashboard</button>
+      <button class="nav-btn active">History</button>
+      <button class="nav-icon" aria-label="Settings"><i class="ti ti-settings" aria-hidden="true"></i></button>
+    </div>
+  </nav>
+
+  <div class="content">
+    <div class="history-header">
+      <div class="history-title">
+        <i class="ti ti-calendar-stats" style="font-size:20px;color:#1D9E75" aria-hidden="true"></i>History
+      </div>
+      <div class="toggle-group">
+        <button class="toggle-btn" id="wkBtn">Weekly</button>
+        <button class="toggle-btn active" id="moBtn">Monthly</button>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-tile">
+        <div class="stat-label">Range</div>
+        <div class="stat-val">30 <span class="stat-unit">days</span></div>
+        <div class="stat-sub">June 2026</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Active days</div>
+        <div class="stat-val">3 <span class="stat-unit">days</span></div>
+        <div class="stat-sub">27 days empty</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Total calories</div>
+        <div class="stat-val">3,785 <span class="stat-unit">kcal</span></div>
+        <div class="stat-sub">across active days</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Avg per active day</div>
+        <div class="stat-val">1,262 <span class="stat-unit">kcal</span></div>
+        <div class="stat-sub" style="color:#1D9E75">63% of 2000 goal</div>
+      </div>
+    </div>
+
+    <div class="cal-card">
+      <div class="cal-nav">
+        <button class="cal-nav-btn" id="prevMo" aria-label="Previous month"><i class="ti ti-chevron-left" aria-hidden="true"></i></button>
+        <div style="display:flex;align-items:center;gap:16px">
+          <span class="cal-month" id="calMonthLabel">June 2026</span>
+          <div class="cal-legend">
+            <span class="leg-swatch" style="background:#E1F5EE;border:0.5px solid #5DCAA5"></span>Low
+            <span class="leg-swatch" style="background:#5DCAA5"></span>Medium
+            <span class="leg-swatch" style="background:#1D9E75"></span>On track
+            <span class="leg-swatch" style="background:#E24B4A"></span>Over
+          </div>
+        </div>
+        <button class="cal-nav-btn" id="nextMo" aria-label="Next month"><i class="ti ti-chevron-right" aria-hidden="true"></i></button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+
+    <div class="detail-panel" id="detailPanel"></div>
+  </div>
+</div>
+
+<script>
+const DATA={
+  '2026-06-25':{cal:1373,pro:89.4,carb:133.3,fat:56.6,goal:1800,items:[
+    {name:'Egg',qty:'5 eggs',cal:375,pro:30,carb:2.5,fat:25},
+    {name:'Chicken Breast',qty:'1 piece 25g',cal:41,pro:7.8,carb:0,fat:0.9},
+    {name:'Curd',qty:'100g',cal:98,pro:11,carb:3.6,fat:4.3},
+    {name:'Rice',qty:'150g cooked',cal:195,pro:4.1,carb:42,fat:0.5},
+    {name:'Dal (toor)',qty:'1 cup',cal:130,pro:9,carb:22,fat:0.5},
+    {name:'Banana',qty:'1 medium',cal:105,pro:1.3,carb:27,fat:0.3},
+    {name:'Peanuts',qty:'1 handful',cal:170,pro:7.8,carb:5.5,fat:14.7},
+    {name:'Roti',qty:'2 pieces',cal:160,pro:5.4,carb:30,fat:0.8},
+  ]},
+  '2026-06-26':{cal:1125,pro:95,carb:81.4,fat:31,goal:2000,items:[
+    {name:'Oats',qty:'40g dry',cal:150,pro:5,carb:27,fat:3},
+    {name:'Milk',qty:'1 glass',cal:150,pro:8,carb:12,fat:8},
+    {name:'Chicken Breast',qty:'100g',cal:165,pro:31,carb:0,fat:3.6},
+    {name:'Apple',qty:'1 medium',cal:78,pro:0.4,carb:21,fat:0.2},
+    {name:'Egg White',qty:'4 pieces',cal:68,pro:14.4,carb:0,fat:0},
+    {name:'Dal',qty:'1 cup',cal:130,pro:9,carb:22,fat:0.5},
+    {name:'Roti',qty:'2 pieces',cal:160,pro:5.4,carb:30,fat:0.8},
+    {name:'Salad',qty:'1 bowl',cal:30,pro:1,carb:6,fat:0.2},
+  ]},
+  '2026-06-27':{cal:1287,pro:95,carb:162.5,fat:40.7,goal:1500,items:[
+    {name:'Rolled Oats',qty:'40g dry',cal:150,pro:5,carb:27,fat:3},
+    {name:'Apple',qty:'1 medium',cal:78,pro:0.4,carb:21,fat:0.2},
+    {name:'Banana',qty:'1 medium',cal:105,pro:1.3,carb:27,fat:0.3},
+    {name:'Whey Protein Isolate',qty:'15g half scoop',cal:55,pro:13,carb:0.5,fat:0.3},
+    {name:'Double Toned Milk',qty:'1 cup 240ml',cal:120,pro:8.4,carb:12,fat:3.6},
+    {name:'Upma',qty:'1 bowl 200ml',cal:230,pro:4,carb:40,fat:6},
+    {name:'Peanuts',qty:'1 handful',cal:51,pro:7.5,carb:4.5,fat:14.7},
+    {name:'Coffee',qty:'1 cup',cal:215,pro:10,carb:18,fat:9},
+    {name:'Sugar',qty:'12.5g',cal:50,pro:0,carb:12.5,fat:0},
+    {name:'Egg White',qty:'4 pieces',cal:68,pro:14.4,carb:0,fat:0},
+    {name:'Chicken Breast',qty:'100g',cal:165,pro:31,carb:0,fat:3.6},
+  ]},
+};
+
+const GOAL_DEFAULT=2000;
+let viewYear=2026,viewMonth=5,selectedDate=null;
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DOWS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function fmt(n){return n%1===0?n:parseFloat(n.toFixed(1));}
+
+function cellColor(cal,goal){
+  if(!cal) return null;
+  const pct=cal/goal;
+  if(pct>1) return '#E24B4A';
+  if(pct>=0.8) return '#1D9E75';
+  if(pct>=0.4) return '#5DCAA5';
+  return '#9FE1CB';
+}
+
+function renderCalendar(){
+  const grid=document.getElementById('calGrid');
+  document.getElementById('calMonthLabel').textContent=MONTHS[viewMonth]+' '+viewYear;
+  const firstDay=new Date(viewYear,viewMonth,1).getDay();
+  const daysInMonth=new Date(viewYear,viewMonth+1,0).getDate();
+  const today=new Date();
+  let html=DOWS.map(d=>`<div class="dow-header">${d}</div>`).join('');
+  for(let i=0;i<firstDay;i++) html+=`<div class="cal-cell empty"></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const key=`${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const entry=DATA[key];
+    const isToday=today.getFullYear()===viewYear&&today.getMonth()===viewMonth&&today.getDate()===d;
+    const isSel=selectedDate===key;
+    const goal=entry?entry.goal:GOAL_DEFAULT;
+    const pct=entry?Math.min(100,Math.round((entry.cal/goal)*100)):0;
+    const color=entry?cellColor(entry.cal,goal):null;
+    html+=`<div class="cal-cell${isToday?' today':''}${isSel?' selected':''}" data-key="${key}">
+      <div class="cell-date">${String(d).padStart(2,'0')}</div>
+      ${entry?`<div class="cell-bar-wrap"><div class="cell-bar" style="width:${pct}%;background:${color}"></div></div>
+      <div class="cell-cal">${entry.cal.toLocaleString()} <span style="font-size:10px;color:var(--text-muted)">kcal</span></div>`
+      :`<div style="height:4px;margin-bottom:5px"></div><div class="cell-cal zero">—</div>`}
+    </div>`;
+  }
+  grid.innerHTML=html;
+  grid.querySelectorAll('.cal-cell:not(.empty)').forEach(cell=>{
+    cell.addEventListener('click',()=>{
+      selectedDate=cell.dataset.key;
+      renderCalendar();
+      renderDetail();
+    });
+  });
+}
+
+function renderDetail(){
+  const panel=document.getElementById('detailPanel');
+  if(!selectedDate){panel.innerHTML='';return;}
+  const entry=DATA[selectedDate];
+  const goal=entry?entry.goal:GOAL_DEFAULT;
+  const d=new Date(selectedDate);
+  const label=d.toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const over=entry&&entry.cal>goal;
+  const empty=!entry||entry.cal===0;
+  const badgeCls=empty?'dbadge-empty':over?'dbadge-over':'dbadge-ok';
+  const badgeTxt=empty?'No entries':over?'Over goal':'On track';
+  const rows=entry?entry.items.map(it=>`
+    <tr>
+      <td><div class="fn">${it.name}</div><div class="fq">${it.qty}</div></td>
+      <td class="nr vc">${fmt(it.cal)}</td>
+      <td class="nr vp">${fmt(it.pro)}g</td>
+      <td class="nr vb">${fmt(it.carb)}g</td>
+      <td class="nr vf">${fmt(it.fat)}g</td>
+    </tr>`).join(''):'';
+  const tot=entry?entry.items.reduce((a,it)=>({cal:a.cal+it.cal,pro:a.pro+it.pro,carb:a.carb+it.carb,fat:a.fat+it.fat}),{cal:0,pro:0,carb:0,fat:0}):{cal:0,pro:0,carb:0,fat:0};
+  panel.innerHTML=`
+    <div class="detail-header">
+      <div>
+        <div class="detail-date">${label}</div>
+        <div class="detail-kcal">${entry?entry.cal.toLocaleString():0} / ${goal.toLocaleString()} kcal</div>
+      </div>
+      <div class="detail-badges"><span class="dbadge ${badgeCls}">${badgeTxt}</span></div>
+    </div>
+    ${empty
+      ?`<div class="no-entries"><i class="ti ti-moon" style="font-size:13px;margin-right:5px;vertical-align:-1px" aria-hidden="true"></i>No food logged this day</div>`
+      :`<table class="dtbl">
+        <thead><tr>
+          <th style="width:44%">Food</th>
+          <th class="r" style="width:13%">kcal</th>
+          <th class="r" style="width:14%">Protein</th>
+          <th class="r" style="width:13%">Carbs</th>
+          <th class="r" style="width:13%">Fat</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr>
+          <td>Total · ${entry.items.length} items</td>
+          <td class="nr vc">${Math.round(tot.cal)}</td>
+          <td class="nr vp">${fmt(tot.pro)}g</td>
+          <td class="nr vb">${fmt(tot.carb)}g</td>
+          <td class="nr vf">${fmt(tot.fat)}g</td>
+        </tr></tfoot>
+      </table>
+      <div class="macro-summary">
+        <div class="ms-item"><div class="ms-label">Protein</div><div class="ms-val vp">${fmt(entry.pro)}g</div></div>
+        <div class="ms-item"><div class="ms-label">Carbs</div><div class="ms-val vb">${fmt(entry.carb)}g</div></div>
+        <div class="ms-item"><div class="ms-label">Fat</div><div class="ms-val vf">${fmt(entry.fat)}g</div></div>
+      </div>`
+    }
+  `;
+}
+
+document.getElementById('prevMo').addEventListener('click',()=>{
+  viewMonth--;if(viewMonth<0){viewMonth=11;viewYear--;}
+  selectedDate=null;renderCalendar();renderDetail();
+});
+document.getElementById('nextMo').addEventListener('click',()=>{
+  viewMonth++;if(viewMonth>11){viewMonth=0;viewYear++;}
+  selectedDate=null;renderCalendar();renderDetail();
+});
+document.getElementById('wkBtn').addEventListener('click',()=>{
+  document.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('wkBtn').classList.add('active');
+});
+document.getElementById('moBtn').addEventListener('click',()=>{
+  document.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('moBtn').classList.add('active');
+});
+
+selectedDate='2026-06-27';
+renderCalendar();
+renderDetail();
+</script>

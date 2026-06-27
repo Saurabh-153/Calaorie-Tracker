@@ -45,6 +45,15 @@ def load_user(user_id: str):
     return User(row) if row else None
 
 
+@login_manager.unauthorized_handler
+def unauthorized():
+    """Return JSON 401 for API/fetch requests, redirect otherwise."""
+    if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest" \
+            or request.path.startswith("/api/") or request.path.startswith("/add"):
+        return jsonify({"error": "Session expired. Please log in again."}), 401
+    return redirect(url_for("login"))
+
+
 @app.template_filter("prev_day")
 def prev_day_filter(d: str) -> str:
     """Return the ISO date string for the day before d."""
@@ -187,6 +196,7 @@ def logout():
 def index():
     """Main dashboard — food log, progress bar, and goal form for a given date."""
     selected_date = request.args.get("date", "").strip() or today_str()
+    goal_saved = request.args.get("goal_saved", "") == "1"
     entries = db.get_entries_for_date(selected_date, int(current_user.id))
     totals = daily_totals(entries)
     goal = db.get_goal_for_date_or_default(selected_date, int(current_user.id))
@@ -197,6 +207,7 @@ def index():
         entries=entries,
         totals=totals,
         goal=goal,
+        goal_saved=goal_saved,
     )
 
 
@@ -222,7 +233,7 @@ def save_goal():
         carbs_goal=float(request.form.get("carbs_goal", 0) or 0),
     )
     db.upsert_goal(goal, int(current_user.id))
-    return redirect(url_for("index", date=goal_date))
+    return redirect(url_for("index", date=goal_date, goal_saved="1"))
 
 
 @app.route("/api/goal/<date>")
@@ -259,6 +270,16 @@ def api_get_day(date: str):
             for e in entries
         ],
     })
+
+
+@app.route("/api/food-search")
+@login_required
+def api_food_search():
+    query = request.args.get("q", "").strip()
+    if not query:
+        return jsonify({"items": []})
+    items = db.search_food_entries(query, int(current_user.id), limit=20)
+    return jsonify({"items": items})
 
 
 @app.route("/history")
@@ -469,6 +490,7 @@ def add_bulk_entries():
 
         entry = FoodEntry(
             id=None,
+            user_id=int(current_user.id),
             date=entry_date,
             name=display_name,
             calories=int(item.get("calories", 0)),

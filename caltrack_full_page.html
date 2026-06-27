@@ -1,0 +1,352 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);background:var(--surface-0)}
+.page{max-width:860px;margin:0 auto;padding:0 0 2rem}
+
+.topnav{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--surface-2);border-bottom:0.5px solid var(--border)}
+.brand{display:flex;align-items:center;gap:8px}
+.brand-name{font-size:16px;font-weight:500;color:var(--text-primary)}
+.brand-dot{width:8px;height:8px;border-radius:50%;background:#1D9E75}
+.brand-date{font-size:12px;color:var(--text-muted);margin-left:4px}
+.nav-links{display:flex;align-items:center;gap:4px}
+.nav-btn{padding:6px 14px;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text-secondary)}
+.nav-btn.active{background:#1D9E75;color:#fff}
+.nav-btn:hover:not(.active){background:var(--surface-1)}
+.nav-icon{background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;padding:4px}
+
+.content{padding:16px 20px;display:flex;flex-direction:column;gap:16px}
+
+.date-bar{display:flex;align-items:center;gap:10px;background:var(--surface-2);border:0.5px solid var(--border);border-radius:10px;padding:10px 14px}
+.date-nav{background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;padding:2px 6px;border-radius:4px}
+.date-nav:hover{background:var(--surface-1);color:var(--text-primary)}
+.date-input{border:0.5px solid var(--border);border-radius:var(--radius);padding:5px 10px;font-size:13px;color:var(--text-primary);background:var(--surface-1);outline:none}
+.today-pill{padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500;background:#E1F5EE;color:#0F6E56;border:none;cursor:pointer}
+
+.ai-card{background:var(--surface-2);border:0.5px solid #5DCAA5;border-radius:12px;padding:16px}
+.ai-header{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.ai-icon{width:28px;height:28px;border-radius:var(--radius);background:#E1F5EE;display:flex;align-items:center;justify-content:center;color:#0F6E56;font-size:15px}
+.ai-title{font-size:13px;font-weight:500;color:var(--text-primary)}
+.ai-subtitle{font-size:12px;color:var(--text-muted);margin-bottom:10px;font-style:italic}
+.ai-row{display:flex;gap:10px}
+.ai-input{flex:1;padding:10px 14px;border:0.5px solid var(--border-strong);border-radius:var(--radius);background:var(--surface-1);color:var(--text-primary);font-size:14px;resize:none;height:52px;outline:none;line-height:1.5}
+.ai-input:focus{border-color:#5DCAA5;box-shadow:0 0 0 2px #E1F5EE}
+.parse-btn{padding:0 20px;background:#1D9E75;color:#fff;border:none;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.parse-btn:hover{opacity:0.9}
+.parse-btn:active{transform:scale(0.98)}
+
+.summary-card{background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:18px 20px}
+.cal-row{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+.cal-big{font-size:36px;font-weight:500;color:var(--text-primary)}
+.cal-goal{font-size:14px;color:var(--text-muted);margin-left:6px}
+.cal-pct{font-size:14px;font-weight:500}
+.prog-track{height:10px;background:var(--surface-1);border-radius:5px;overflow:hidden;margin-bottom:16px}
+.prog-fill{height:100%;border-radius:5px;transition:width 0.4s}
+.macro-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.macro-tile{background:var(--surface-1);border-radius:var(--radius);padding:12px 14px}
+.macro-tile-label{font-size:10px;font-weight:500;letter-spacing:0.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.macro-tile-dot{width:6px;height:6px;border-radius:50%}
+.macro-tile-val{font-size:22px;font-weight:500;color:var(--text-primary)}
+.macro-tile-unit{font-size:13px;color:var(--text-muted);font-weight:400}
+.macro-tile-sub{font-size:11px;color:var(--text-muted);margin-top:4px}
+.mini-bar{height:3px;background:var(--surface-2);border-radius:2px;margin-top:8px;overflow:hidden}
+.mini-fill{height:100%;border-radius:2px}
+
+.log-card{background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;overflow:hidden}
+.log-top{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:0.5px solid var(--border)}
+.log-title{font-size:11px;font-weight:500;color:var(--text-muted);letter-spacing:0.07em;text-transform:uppercase}
+.search-wrap{position:relative;flex:1;margin:0 12px}
+.search-wrap input{width:100%;padding:0 10px 0 32px;height:34px;border:0.5px solid var(--border-strong);border-radius:var(--radius);background:var(--surface-1);color:var(--text-primary);font-size:13px;outline:none}
+.search-wrap input:focus{border-color:#5DCAA5;box-shadow:0 0 0 2px #E1F5EE}
+.search-wrap .si{position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--text-muted);pointer-events:none}
+.log-meal-btn{padding:0 14px;height:34px;background:#1D9E75;color:#fff;border:none;border-radius:var(--radius);font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.log-meal-btn:hover{opacity:0.9}
+
+table{width:100%;border-collapse:collapse}
+thead tr{background:var(--surface-1)}
+th{padding:8px 12px;font-size:10px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-muted);text-align:left}
+th.r{text-align:right}
+td{padding:10px 12px;font-size:13px;border-bottom:0.5px solid var(--border);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--surface-1)}
+.fname{font-weight:500;color:var(--text-primary)}
+.fqty{font-size:11px;color:var(--text-muted);margin-top:1px}
+.fcat{display:inline-block;font-size:10px;padding:1px 5px;border-radius:4px;background:var(--surface-1);border:0.5px solid var(--border);color:var(--text-muted);margin-left:6px;vertical-align:middle}
+.nr{text-align:right;font-variant-numeric:tabular-nums}
+.vc{color:var(--text-primary);font-weight:500}
+.vp{color:#7F77DD}
+.vb{color:#EF9F27}
+.vf{color:var(--text-secondary)}
+.xbtn{background:none;border:none;cursor:pointer;color:var(--text-muted);padding:3px 5px;border-radius:4px;font-size:14px;line-height:1}
+.xbtn:hover{color:#E24B4A;background:#FCEBEB}
+tfoot td{background:var(--surface-1);border-top:0.5px solid var(--border-strong);border-bottom:none;padding:11px 12px}
+.tot-label{font-size:12px;font-weight:500;color:var(--text-secondary)}
+.tot-val{font-size:14px;font-weight:500}
+
+.bar-strip{display:flex;gap:8px;padding:12px 16px;border-top:0.5px solid var(--border);background:var(--surface-2)}
+.bs-item{flex:1}
+.bs-label{display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:4px}
+.bs-track{height:4px;background:var(--surface-1);border-radius:2px;overflow:hidden}
+.bs-fill{height:100%;border-radius:2px}
+
+.goal-card{background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:18px 20px}
+.goal-header{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.goal-icon{width:30px;height:30px;border-radius:var(--radius);background:#E1F5EE;display:flex;align-items:center;justify-content:center;color:#0F6E56;font-size:16px}
+.goal-title{font-size:14px;font-weight:500;color:var(--text-primary)}
+.goal-sub{font-size:12px;color:var(--text-muted);margin-bottom:16px}
+.goal-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.goal-tile{background:var(--surface-1);border-radius:var(--radius);padding:14px}
+.goal-tile-top{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.goal-dot{width:7px;height:7px;border-radius:50%}
+.goal-tile-name{font-size:12px;font-weight:500;color:var(--text-secondary)}
+.goal-target-label{font-size:10px;color:var(--text-muted);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:4px}
+.goal-input{width:100%;padding:7px 10px;border:0.5px solid var(--border-strong);border-radius:var(--radius);background:var(--surface-2);color:var(--text-primary);font-size:18px;font-weight:500;outline:none}
+.goal-input:focus{border-color:#5DCAA5;box-shadow:0 0 0 2px #E1F5EE}
+.goal-unit{font-size:11px;color:var(--text-muted);margin-top:4px}
+.goal-prog{height:3px;background:var(--surface-2);border-radius:2px;margin-top:8px;overflow:hidden}
+.goal-prog-fill{height:100%;border-radius:2px}
+.goal-prog-label{font-size:10px;color:var(--text-muted);margin-top:4px}
+.save-goals-btn{width:100%;padding:11px;background:#1D9E75;color:#fff;border:none;border-radius:var(--radius);font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px}
+.save-goals-btn:hover{opacity:0.9}
+.save-goals-btn:active{transform:scale(0.99)}
+.saved-flash{text-align:center;font-size:12px;color:#1D9E75;margin-top:8px;height:16px;opacity:0;transition:opacity 0.3s}
+.saved-flash.on{opacity:1}
+</style>
+
+<div class="page">
+  <h2 class="sr-only">CalTrack — daily nutrition tracker</h2>
+
+  <nav class="topnav">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <span class="brand-name">CalTrack</span>
+      <span class="brand-date">2026-06-27</span>
+    </div>
+    <div class="nav-links">
+      <button class="nav-btn active">Dashboard</button>
+      <button class="nav-btn">History</button>
+      <button class="nav-icon" aria-label="Settings"><i class="ti ti-settings" aria-hidden="true"></i></button>
+    </div>
+  </nav>
+
+  <div class="content">
+
+    <div class="date-bar">
+      <button class="date-nav" aria-label="Previous day"><i class="ti ti-chevron-left" aria-hidden="true"></i></button>
+      <input class="date-input" type="date" value="2026-06-27" aria-label="Select date" />
+      <button class="today-pill">Today</button>
+      <button class="date-nav" aria-label="Next day"><i class="ti ti-chevron-right" aria-hidden="true"></i></button>
+    </div>
+
+    <div class="ai-card">
+      <div class="ai-header">
+        <div class="ai-icon"><i class="ti ti-sparkles" aria-hidden="true"></i></div>
+        <span class="ai-title">Add food (AI-powered)</span>
+      </div>
+      <div class="ai-subtitle">Describe your meal in natural language, e.g. "1 roti, 1 cup dal, 100g rice" or "2 eggs with toast and coffee"</div>
+      <div class="ai-row">
+        <textarea class="ai-input" placeholder="e.g. 2 eggs, 1 slice toast with butter, 1 cup coffee with milk" aria-label="Describe your meal"></textarea>
+        <button class="parse-btn">
+          <i class="ti ti-wand" style="font-size:14px" aria-hidden="true"></i>Parse &amp; Add
+        </button>
+      </div>
+    </div>
+
+    <div class="summary-card">
+      <div class="cal-row">
+        <div>
+          <span class="cal-big" id="calBig">1287</span>
+          <span class="cal-goal">/ 1500 kcal</span>
+        </div>
+        <span class="cal-pct" style="color:#1D9E75" id="calPct">86%</span>
+      </div>
+      <div class="prog-track">
+        <div class="prog-fill" id="mainProg" style="width:86%;background:linear-gradient(90deg,#1D9E75,#EF9F27)"></div>
+      </div>
+      <div class="macro-grid">
+        <div class="macro-tile">
+          <div class="macro-tile-label"><span class="macro-tile-dot" style="background:#7F77DD"></span>Protein</div>
+          <div><span class="macro-tile-val">95.0</span><span class="macro-tile-unit">g</span></div>
+          <div class="macro-tile-sub">95% of 100g goal</div>
+          <div class="mini-bar"><div class="mini-fill" style="width:95%;background:#7F77DD"></div></div>
+        </div>
+        <div class="macro-tile">
+          <div class="macro-tile-label"><span class="macro-tile-dot" style="background:#EF9F27"></span>Carbs</div>
+          <div><span class="macro-tile-val">162.5</span><span class="macro-tile-unit">g</span></div>
+          <div class="macro-tile-sub" style="color:#E24B4A">163% of 100g goal</div>
+          <div class="mini-bar"><div class="mini-fill" style="width:100%;background:#E24B4A"></div></div>
+        </div>
+        <div class="macro-tile">
+          <div class="macro-tile-label"><span class="macro-tile-dot" style="background:#888780"></span>Fat</div>
+          <div><span class="macro-tile-val">40.7</span><span class="macro-tile-unit">g</span></div>
+          <div class="macro-tile-sub">— no fat goal set</div>
+          <div class="mini-bar"><div class="mini-fill" style="width:0%;background:#888780"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="log-card">
+      <div class="log-top">
+        <span class="log-title"><i class="ti ti-list" style="font-size:13px;vertical-align:-1px;margin-right:5px" aria-hidden="true"></i>Today's log</span>
+        <div class="search-wrap">
+          <i class="ti ti-search si" aria-hidden="true"></i>
+          <input type="text" placeholder="Search historic foods…" id="searchInput" aria-label="Search foods" />
+        </div>
+        <button class="log-meal-btn" id="logMealBtn">
+          <i class="ti ti-plus" style="font-size:13px" aria-hidden="true"></i>Log this meal
+        </button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:44%">Food</th>
+            <th class="r" style="width:10%">kcal</th>
+            <th class="r" style="width:12%">Protein</th>
+            <th class="r" style="width:10%">Carbs</th>
+            <th class="r" style="width:10%">Fat</th>
+            <th style="width:14%"></th>
+          </tr>
+        </thead>
+        <tbody id="logBody"></tbody>
+        <tfoot id="logFoot"></tfoot>
+      </table>
+      <div class="bar-strip" id="barStrip"></div>
+    </div>
+
+    <div class="goal-card">
+      <div class="goal-header">
+        <div class="goal-icon"><i class="ti ti-target" aria-hidden="true"></i></div>
+        <div>
+          <div class="goal-title">Daily goal</div>
+        </div>
+      </div>
+      <div class="goal-sub">Keep your calories, protein, and carbs on track.</div>
+      <div class="goal-grid">
+        <div class="goal-tile">
+          <div class="goal-tile-top"><span class="goal-dot" style="background:#1D9E75"></span><span class="goal-tile-name">Calories</span></div>
+          <div class="goal-target-label">Target</div>
+          <input class="goal-input" id="gCal" type="number" value="1500" min="500" max="5000" aria-label="Calorie goal" />
+          <div class="goal-unit">kcal</div>
+          <div class="goal-prog"><div class="goal-prog-fill" id="gCalBar" style="width:86%;background:#1D9E75"></div></div>
+          <div class="goal-prog-label" id="gCalLbl">86% of 1500 kcal</div>
+        </div>
+        <div class="goal-tile">
+          <div class="goal-tile-top"><span class="goal-dot" style="background:#7F77DD"></span><span class="goal-tile-name">Protein</span></div>
+          <div class="goal-target-label">Target</div>
+          <input class="goal-input" id="gPro" type="number" value="100" min="10" max="400" aria-label="Protein goal" />
+          <div class="goal-unit">g</div>
+          <div class="goal-prog"><div class="goal-prog-fill" id="gProBar" style="width:95%;background:#7F77DD"></div></div>
+          <div class="goal-prog-label" id="gProLbl">95% of 100g</div>
+        </div>
+        <div class="goal-tile">
+          <div class="goal-tile-top"><span class="goal-dot" style="background:#EF9F27"></span><span class="goal-tile-name">Carbs</span></div>
+          <div class="goal-target-label">Target</div>
+          <input class="goal-input" id="gCarb" type="number" value="100" min="10" max="600" aria-label="Carbs goal" />
+          <div class="goal-unit">g</div>
+          <div class="goal-prog"><div class="goal-prog-fill" id="gCarbBar" style="width:100%;background:#E24B4A"></div></div>
+          <div class="goal-prog-label" id="gCarbLbl" style="color:#E24B4A">163% of 100g — over!</div>
+        </div>
+      </div>
+      <button class="save-goals-btn" id="saveGoalsBtn">
+        <i class="ti ti-device-floppy" style="font-size:15px" aria-hidden="true"></i>Save goals
+      </button>
+      <div class="saved-flash" id="savedFlash"><i class="ti ti-check" style="font-size:12px;margin-right:3px" aria-hidden="true"></i>Goals saved</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const ITEMS = [
+  {name:"Rolled Oats",qty:"40g dry",cat:"Grains",cal:150,pro:5,carb:27,fat:3},
+  {name:"Apple",qty:"1 medium",cat:"Fruit",cal:78,pro:0.4,carb:21,fat:0.2},
+  {name:"Banana",qty:"1 medium",cat:"Fruit",cal:105,pro:1.3,carb:27,fat:0.3},
+  {name:"Whey Protein Isolate",qty:"15g half scoop",cat:"Supplement",cal:55,pro:13,carb:0.5,fat:0.3},
+  {name:"Double Toned Milk",qty:"1 cup 240ml",cat:"Dairy",cal:120,pro:8.4,carb:12,fat:3.6},
+  {name:"Upma (semolina)",qty:"1 bowl 200ml",cat:"Grains",cal:230,pro:4,carb:40,fat:6},
+  {name:"Peanuts (roasted, salted)",qty:"1 handful 30g",cat:"Nuts",cal:51,pro:7.5,carb:4.5,fat:14.7},
+  {name:"Coffee (specialty)",qty:"1 cup assumed",cat:"Beverage",cal:215,pro:10,carb:18,fat:9},
+  {name:"Sugar",qty:"12.5g",cat:"Other",cal:50,pro:0,carb:12.5,fat:0},
+  {name:"Egg White",qty:"4 pieces",cat:"Protein",cal:68,pro:14.4,carb:0,fat:0},
+  {name:"Chicken Breast",qty:"100g",cat:"Protein",cal:165,pro:31,carb:0,fat:3.6},
+];
+
+let items=[...ITEMS];
+const GOALS={cal:1500,pro:100,carb:100};
+function fmt(n){return n%1===0?n:parseFloat(n.toFixed(1));}
+
+function renderLog(){
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  const visible=items.filter(it=>it.name.toLowerCase().includes(q)||it.cat.toLowerCase().includes(q));
+  document.getElementById('logBody').innerHTML=visible.map((it,i)=>`
+    <tr>
+      <td>
+        <div class="fname">${it.name}<span class="fcat">${it.cat}</span></div>
+        <div class="fqty">${it.qty}</div>
+      </td>
+      <td class="nr vc">${fmt(it.cal)}</td>
+      <td class="nr vp">${fmt(it.pro)}g</td>
+      <td class="nr vb">${fmt(it.carb)}g</td>
+      <td class="nr vf">${fmt(it.fat)}g</td>
+      <td style="text-align:center">
+        <button class="xbtn" data-i="${items.indexOf(it)}" aria-label="Remove ${it.name}"><i class="ti ti-x" aria-hidden="true"></i></button>
+      </td>
+    </tr>
+  `).join('');
+  document.getElementById('logBody').querySelectorAll('.xbtn').forEach(btn=>{
+    btn.addEventListener('click',()=>{items.splice(+btn.dataset.i,1);renderLog();});
+  });
+  const tot=items.reduce((a,it)=>({cal:a.cal+it.cal,pro:a.pro+it.pro,carb:a.carb+it.carb,fat:a.fat+it.fat}),{cal:0,pro:0,carb:0,fat:0});
+  document.getElementById('logFoot').innerHTML=`
+    <tr>
+      <td><span class="tot-label">Total · ${items.length} items</span></td>
+      <td class="nr tot-val vc">${Math.round(tot.cal)}</td>
+      <td class="nr tot-val vp">${fmt(tot.pro)}g</td>
+      <td class="nr tot-val vb">${fmt(tot.carb)}g</td>
+      <td class="nr tot-val vf">${fmt(tot.fat)}g</td>
+      <td></td>
+    </tr>
+  `;
+  const macros=[
+    {label:'Calories',val:Math.round(tot.cal),goal:GOALS.cal,unit:'kcal',color:'#1D9E75'},
+    {label:'Protein',val:fmt(tot.pro),goal:GOALS.pro,unit:'g',color:'#7F77DD'},
+    {label:'Carbs',val:fmt(tot.carb),goal:GOALS.carb,unit:'g',color:'#EF9F27'},
+  ];
+  document.getElementById('barStrip').innerHTML=macros.map(m=>{
+    const pct=Math.min(100,Math.round((m.val/m.goal)*100));
+    const over=pct>=100;
+    return `<div class="bs-item">
+      <div class="bs-label"><span>${m.label}</span><span style="color:${over?'#E24B4A':'var(--text-muted)'}">${m.val}${m.unit} / ${m.goal}${m.unit}</span></div>
+      <div class="bs-track"><div class="bs-fill" style="width:${pct}%;background:${over?'#E24B4A':m.color}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('searchInput').addEventListener('input',renderLog);
+document.getElementById('logMealBtn').addEventListener('click',()=>{
+  sendPrompt('Log this meal: '+items.map(i=>i.name).join(', '));
+});
+
+document.getElementById('saveGoalsBtn').addEventListener('click',()=>{
+  const fl=document.getElementById('savedFlash');
+  fl.classList.add('on');
+  setTimeout(()=>fl.classList.remove('on'),2000);
+});
+
+['Cal','Pro','Carb'].forEach(k=>{
+  document.getElementById('g'+k).addEventListener('input',e=>{
+    const vals={Cal:1287,Pro:95,Carb:162.5};
+    const goals={Cal:+document.getElementById('gCal').value,Pro:+document.getElementById('gPro').value,Carb:+document.getElementById('gCarb').value};
+    const units={Cal:'kcal',Pro:'g',Carb:'g'};
+    const colors={Cal:'#1D9E75',Pro:'#7F77DD',Carb:'#EF9F27'};
+    const pct=Math.min(100,Math.round((vals[k]/goals[k])*100));
+    const over=vals[k]>goals[k];
+    document.getElementById('g'+k+'Bar').style.width=pct+'%';
+    document.getElementById('g'+k+'Bar').style.background=over?'#E24B4A':colors[k];
+    document.getElementById('g'+k+'Lbl').textContent=`${Math.round((vals[k]/goals[k])*100)}% of ${goals[k]}${units[k]}${over?' — over!':''}`;
+    document.getElementById('g'+k+'Lbl').style.color=over?'#E24B4A':'var(--text-muted)';
+  });
+});
+
+renderLog();
+</script>

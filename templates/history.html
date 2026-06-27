@@ -1,216 +1,314 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
+{% block title %}History – CalTrack{% endblock %}
 
 {% block content %}
+<!-- ─── Header ────────────────────────────────────────────────────── -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+  <div style="font-size:18px;font-weight:500;color:var(--text-primary);display:flex;align-items:center;gap:8px">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
+    History
+  </div>
+  <div style="display:flex;background:var(--surface-1);border:0.5px solid var(--border);border-radius:var(--radius);padding:2px;gap:2px">
+    <a href="{{ url_for('history', view='weekly') }}" style="padding:5px 14px;border-radius:6px;font-size:13px;font-weight:500;text-decoration:none;{% if view=='weekly' %}background:#1D9E75;color:#fff{% else %}color:var(--text-secondary){% endif %}">Weekly</a>
+    <a href="{{ url_for('history', view='monthly') }}" style="padding:5px 14px;border-radius:6px;font-size:13px;font-weight:500;text-decoration:none;{% if view=='monthly' %}background:#1D9E75;color:#fff{% else %}color:var(--text-secondary){% endif %}">Monthly</a>
+  </div>
+</div>
 
-<section class="card history-toggle-card">
-  <div class="nl-header">
-    <h2 class="section-label">History</h2>
-    <div class="view-switcher">
-      <a class="btn {% if view == 'weekly' %}active{% endif %}" href="{{ url_for('history', view='weekly') }}">Weekly</a>
-      <a class="btn {% if view == 'monthly' %}active{% endif %}" href="{{ url_for('history', view='monthly') }}">Monthly</a>
+<!-- ─── Stat Grid ─────────────────────────────────────────────────── -->
+{% set active_days = days | selectattr('totals.calories', 'gt', 0) | list | length %}
+{% set avg_active = (summary.total_calories / active_days) | int if active_days > 0 else 0 %}
+{% if view == 'weekly' %}
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+  <div class="card" style="padding:14px 16px">
+    <div style="font-size:10px;font-weight:500;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">Selected range</div>
+    <div style="font-size:26px;font-weight:500">{{ summary.days }} <span style="font-size:13px;color:var(--text-muted)">days</span></div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:3px">{{ days[0].date }} – {{ days[-1].date }}</div>
+  </div>
+  <div class="card" style="padding:14px 16px">
+    <div style="font-size:10px;font-weight:500;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">Total calories</div>
+    <div style="font-size:26px;font-weight:500">{{ summary.total_calories | int | string | replace(',','') }} <span style="font-size:13px;color:var(--text-muted)">kcal</span></div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:3px">across {{ active_days }} active day{{ 's' if active_days != 1 else '' }}</div>
+  </div>
+  <div class="card" style="padding:14px 16px">
+    <div style="font-size:10px;font-weight:500;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">Average per day</div>
+    <div style="font-size:26px;font-weight:500">{{ summary.average_calories }} <span style="font-size:13px;color:var(--text-muted)">kcal</span></div>
+    {% set goal_pct = ((summary.average_calories / goal_line * 100) | int) if goal_line > 0 else 0 %}
+    <div style="font-size:12px;margin-top:3px;color:{% if goal_pct > 100 %}#E24B4A{% else %}#1D9E75{% endif %}">{{ goal_pct }}% of {{ goal_line }} kcal goal</div>
+  </div>
+</div>
+{% else %}
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px">
+  <div class="card" style="padding:14px 16px">
+    <div style="font-size:10px;font-weight:500;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">Range</div>
+    <div style="font-size:22px;font-weight:500">{{ summary.days }} <span style="font-size:12px;color:var(--text-muted)">days</span></div>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:3px">{{ month_title }}</div>
+  </div>
+  <div class="card" style="padding:14px 16px">
+    <div style="font-size:10px;font-weight:500;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">Active days</div>
+    <div style="font-size:22px;font-weight:500">{{ active_days }} <span style="font-size:12px;color:var(--text-muted)">days</span></div>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:3px">{{ summary.days - active_days }} days empty</div>
+  </div>
+  <div class="card" style="padding:14px 16px">
+    <div style="font-size:10px;font-weight:500;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">Total calories</div>
+    <div style="font-size:22px;font-weight:500">{{ "{:,}".format(summary.total_calories | int) }} <span style="font-size:12px;color:var(--text-muted)">kcal</span></div>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:3px">across active days</div>
+  </div>
+  <div class="card" style="padding:14px 16px">
+    <div style="font-size:10px;font-weight:500;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">Avg per active day</div>
+    <div style="font-size:22px;font-weight:500">{{ "{:,}".format(avg_active) }} <span style="font-size:12px;color:var(--text-muted)">kcal</span></div>
+    {% set goal_pct = ((avg_active / goal_line * 100) | int) if goal_line > 0 else 0 %}
+    <div style="font-size:11px;margin-top:3px;color:{% if goal_pct > 100 %}#E24B4A{% else %}#1D9E75{% endif %}">{{ goal_pct }}% of {{ goal_line }} goal</div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ─── Weekly Chart ───────────────────────────────────────────────── -->
+{% if view == 'weekly' %}
+<div class="card" style="padding:18px 20px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <span style="font-size:13px;font-weight:500;color:var(--text-secondary);letter-spacing:.05em;text-transform:uppercase">7-day calorie overview</span>
+    <div style="display:flex;gap:12px">
+      <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-muted)"><span style="width:8px;height:8px;border-radius:2px;background:#EF9F27;display:inline-block"></span>Carbs</span>
+      <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-muted)"><span style="width:8px;height:8px;border-radius:2px;background:#7F77DD;display:inline-block"></span>Protein</span>
+      <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-muted)"><span style="width:8px;height:8px;border-radius:2px;background:#1D9E75;display:inline-block"></span>Fat</span>
+      <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-muted)"><span style="width:8px;height:8px;border-radius:2px;background:rgba(226,75,74,.25);border:1px dashed #E24B4A;display:inline-block"></span>Goal</span>
     </div>
   </div>
-</section>
+  <div style="position:relative;height:240px"><canvas id="histChart"></canvas></div>
+</div>
 
-<section class="card summary-card">
-  <div class="summary-grid">
-    <div>
-      <span class="summary-label">Selected range</span>
-      <strong>{{ summary.days }} days</strong>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const DAYS_DATA = [{% for d in days %}{
+  label:"{{ d.label }}",date:"{{ d.date[5:7] }}/{{ d.date[8:10] }}",
+  cal:{{ d.totals.calories }},pro:{{ d.totals.protein }},
+  carb:{{ d.totals.carbs }},fat:{{ d.totals.fat }},
+  goal:{{ d.goal.calorie_goal }}
+}{% if not loop.last %},{% endif %}{% endfor %}];
+const maxCal=Math.max(...DAYS_DATA.map(d=>Math.max(d.cal,d.goal)),100);
+const yMax=Math.ceil(maxCal/500)*500+200;
+new Chart(document.getElementById('histChart').getContext('2d'),{
+  type:'bar',
+  data:{
+    labels:DAYS_DATA.map(d=>d.label+'\n'+d.date),
+    datasets:[
+      {label:'Carbs kcal',data:DAYS_DATA.map(d=>Math.round(d.carb*4)),backgroundColor:'#EF9F27',borderRadius:{topLeft:0,topRight:0,bottomLeft:3,bottomRight:3},stack:'cal'},
+      {label:'Protein kcal',data:DAYS_DATA.map(d=>Math.round(d.pro*4)),backgroundColor:'#7F77DD',borderRadius:0,stack:'cal'},
+      {label:'Fat kcal',data:DAYS_DATA.map(d=>Math.round(d.fat*9)),backgroundColor:'#1D9E75',borderRadius:{topLeft:3,topRight:3,bottomLeft:0,bottomRight:0},stack:'cal'},
+      {label:'Goal',type:'line',data:DAYS_DATA.map(d=>d.goal),borderColor:'#E24B4A',borderWidth:1.5,borderDash:[5,4],pointRadius:0,fill:false,tension:0,stack:undefined}
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{
+      title:i=>i[0].label.replace('\n',' '),
+      label:i=>{const d=DAYS_DATA[i.dataIndex];if(i.dataset.label==='Goal')return`Goal: ${d.goal} kcal`;if(i.dataset.label==='Fat kcal')return`Fat: ${d.fat}g`;if(i.dataset.label==='Protein kcal')return`Protein: ${d.pro}g`;if(i.dataset.label==='Carbs kcal')return`Carbs: ${d.carb}g`;},
+      footer:i=>{const d=DAYS_DATA[i[0].dataIndex];return d.cal>0?`Total: ${d.cal} kcal`:'';},
+    }}},
+    scales:{
+      x:{grid:{display:false},ticks:{color:'#888780',font:{size:11}},stacked:true},
+      y:{grid:{color:'rgba(128,128,128,0.1)'},ticks:{color:'#888780',font:{size:11},callback:v=>v>=1000?(v/1000).toFixed(1)+'k':v},stacked:true,max:yMax,min:0}
+    },animation:{duration:600}
+  }
+});
+</script>
+
+<!-- ─── Weekly Day Cards ───────────────────────────────────────────── -->
+<div id="dayEntries" style="display:flex;flex-direction:column;gap:10px">
+{% for d in days | reverse %}
+{% set pct = [[((d.totals.calories / d.goal.calorie_goal * 100) | int), 0] | max, 100] | min if d.goal.calorie_goal > 0 else 0 %}
+{% set over = d.totals.calories > d.goal.calorie_goal %}
+{% set empty = d.totals.calories == 0 %}
+<div class="card" style="padding:0;overflow:hidden">
+  <div class="day-hdr" style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer;user-select:none" onclick="toggleDay(this)">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div>
+        <span style="font-size:14px;font-weight:500;color:var(--text-primary)">{{ d.label }}</span>
+        <span style="font-size:12px;color:var(--text-muted);margin-left:6px">{{ d.date }}</span>
+      </div>
+      <span style="font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;{% if empty %}background:var(--surface-1);color:var(--text-muted);border:0.5px solid var(--border){% elif over %}background:#FCEBEB;color:#A32D2D{% else %}background:#E1F5EE;color:#0F6E56{% endif %}">{% if empty %}No entries{% elif over %}Over goal{% else %}On track{% endif %}</span>
     </div>
-    <div>
-      <span class="summary-label">Total calories</span>
-      <strong>{{ summary.total_calories | int }}</strong>
-    </div>
-    <div>
-      <span class="summary-label">Average per day</span>
-      <strong>{{ summary.average_calories | int }}</strong>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:13px;font-weight:500;color:var(--text-primary)">{{ d.totals.calories }} kcal</span>
+      <span style="font-size:12px;color:var(--text-muted)">/ {{ d.goal.calorie_goal }}</span>
+      <svg class="chev" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="color:var(--text-muted);transition:transform .2s"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
   </div>
-</section>
-
-<section class="card">
-  {% if view == 'weekly' %}
-  <h2 class="section-label">7-Day Calorie Overview</h2>
-  {% else %}
-  <div style="display:flex; align-items:center; gap:.75rem;">
-    <form method="get" action="{{ url_for('history') }}">
-      <input type="hidden" name="view" value="monthly" />
-      <input type="hidden" name="year" value="{{ prev_month[0] }}" />
-      <input type="hidden" name="month" value="{{ prev_month[1] }}" />
-      <button class="btn" type="submit">◀</button>
-    </form>
-    <h2 class="section-label">{{ month_title or 'Monthly' }} Calorie Overview</h2>
-    <form method="get" action="{{ url_for('history') }}">
-      <input type="hidden" name="view" value="monthly" />
-      <input type="hidden" name="year" value="{{ next_month[0] }}" />
-      <input type="hidden" name="month" value="{{ next_month[1] }}" />
-      <button class="btn" type="submit">▶</button>
-    </form>
-  </div>
-  {% endif %}
-
-  {% if view == 'weekly' %}
-  {# Weekly bar chart #}
-  {% set chart_w  = 600 %}
-  {% set chart_h  = 220 %}
-  {% set pad_left = 44 %}
-  {% set pad_top  = 16 %}
-  {% set svg_w    = chart_w + pad_left + 16 %}
-  {% set svg_h    = chart_h + pad_top + 52 %}
-  {% set n        = days | length %}
-  {% set bar_w    = 50 %}
-  {% set gap      = ((chart_w - n * bar_w) / (n + 1)) | round(0) | int %}
-
-  <div class="chart-wrap">
-    <svg viewBox="0 0 {{ svg_w }} {{ svg_h }}" xmlns="http://www.w3.org/2000/svg"
-         class="bar-chart" aria-label="{{ view }} calorie bar chart">
-
-      {% for frac in [1.0, 0.75, 0.5, 0.25, 0.0] %}
-        {% set y = pad_top + chart_h * (1 - frac) %}
-        {% set val = (chart_max * frac) | round(0) | int %}
-        <text x="{{ pad_left - 6 }}" y="{{ y + 4 }}"
-              text-anchor="end" class="axis-label">{{ val }}</text>
-        <line x1="{{ pad_left }}" y1="{{ y }}"
-              x2="{{ pad_left + chart_w }}" y2="{{ y }}"
-              stroke="#ddd" stroke-width="1" />
-      {% endfor %}
-
-      {% set goal_y = pad_top + chart_h * (1 - goal_line / chart_max) %}
-      <line x1="{{ pad_left }}" y1="{{ goal_y }}"
-            x2="{{ pad_left + chart_w }}" y2="{{ goal_y }}"
-            stroke="#E8614A" stroke-width="1.5"
-            stroke-dasharray="6 4" />
-      <text x="{{ pad_left + chart_w + 4 }}" y="{{ goal_y + 4 }}"
-            class="goal-label" fill="#E8614A" font-size="11">kcal goal</text>
-
-      {% if protein_goal_line > 0 %}
-        {% set prot_y = pad_top + chart_h * (1 - protein_goal_line / chart_max) %}
-        <line x1="{{ pad_left }}" y1="{{ prot_y }}"
-              x2="{{ pad_left + chart_w }}" y2="{{ prot_y }}"
-              stroke="#7C3AED" stroke-width="1.5"
-              stroke-dasharray="4 3" />
-        <text x="{{ pad_left + chart_w + 4 }}" y="{{ prot_y + 4 }}"
-              class="goal-label" fill="#7C3AED" font-size="11">P goal</text>
-      {% endif %}
-
-      {% if carbs_goal_line > 0 %}
-        {% set carbs_y = pad_top + chart_h * (1 - carbs_goal_line / chart_max) %}
-        <line x1="{{ pad_left }}" y1="{{ carbs_y }}"
-              x2="{{ pad_left + chart_w }}" y2="{{ carbs_y }}"
-              stroke="#F59E0B" stroke-width="1.5"
-              stroke-dasharray="4 3" />
-        <text x="{{ pad_left + chart_w + 4 }}" y="{{ carbs_y + 4 }}"
-              class="goal-label" fill="#F59E0B" font-size="11">C goal</text>
-      {% endif %}
-
-      {% for day in days %}
-        {% set cal = day.totals.calories %}
-        {% set bar_h = (cal / chart_max * chart_h) if chart_max > 0 else 0 %}
-        {% set x = pad_left + gap + loop.index0 * (bar_w + gap) %}
-        {% set y = pad_top + chart_h - bar_h %}
-
-        {% if cal > goal_line %}
-          {% set teal_h = (goal_line / chart_max * chart_h) if chart_max > 0 else 0 %}
-          {% set coral_h = bar_h - teal_h %}
-          <rect x="{{ x }}" y="{{ pad_top + chart_h - teal_h }}"
-                width="{{ bar_w }}" height="{{ teal_h }}"
-                fill="#0D9E8A" rx="3" />
-          <rect x="{{ x }}" y="{{ y }}"
-                width="{{ bar_w }}" height="{{ coral_h }}"
-                fill="#E8614A" rx="3" />
-        {% else %}
-          <rect x="{{ x }}" y="{{ y }}"
-                width="{{ bar_w }}" height="{{ bar_h }}"
-                fill="#0D9E8A" rx="3" />
-        {% endif %}
-
-        <text x="{{ x + bar_w / 2 }}" y="{{ y - 6 }}"
-              text-anchor="middle" class="bar-value"
-              fill="{% if cal > goal_line %}#E8614A{% else %}#1C1C1E{% endif %}"
-              font-size="12" font-weight="600">{{ cal }}</text>
-
-        <text x="{{ x + bar_w / 2 }}" y="{{ pad_top + chart_h + 18 }}"
-              text-anchor="middle" class="axis-label" font-size="12">{{ day.label }}</text>
-      {% endfor %}
-
-    </svg>
-  </div>
-  {% else %}
-  {# Monthly calendar grid #}
-  <div class="calendar-grid">
-    <div class="calendar-header">Sun</div>
-    <div class="calendar-header">Mon</div>
-    <div class="calendar-header">Tue</div>
-    <div class="calendar-header">Wed</div>
-    <div class="calendar-header">Thu</div>
-    <div class="calendar-header">Fri</div>
-    <div class="calendar-header">Sat</div>
-
-    {% for week in weeks %}
-      {% for day in week %}
-        {% if day %}
-          {% set bubble_size = 16 + (day.totals.calories / chart_max * 24) if chart_max > 0 else 16 %}
-          <div class="calendar-cell{% if day.date == today %} today{% endif %}" title="Calories: {{ day.totals.calories }} / {{ day.goal.calorie_goal }} kcal | Protein: {{ day.totals.protein }}g / {{ day.goal.protein_goal | int }}g | Carbs: {{ day.totals.carbs }}g / {{ day.goal.carbs_goal | int }}g">
-            <div class="calendar-day-label">{{ '%02d' | format(day.date[-2:] | int) }}</div>
-            <div class="calendar-bubble" style="width: {{ bubble_size }}px; height: {{ bubble_size }}px;">
-              <span>{{ day.totals.calories }}</span>
-            </div>
-          </div>
-        {% else %}
-          <div class="calendar-cell empty"></div>
-        {% endif %}
-      {% endfor %}
-    {% endfor %}
-  </div>
-  {% endif %}
-</section>
-
-<!-- ─── Per-Day Detail Tables ──────────────────────────────────────── -->
-{% for day in days %}
-<section class="card day-card">
-  <div class="day-header">
-    <span class="day-title">{{ day.label }}</span>
-    <span class="day-date">{{ day.date }}</span>
-    <span class="day-kcal {% if day.totals.calories > day.goal.calorie_goal %}text-coral{% endif %}">
-      {{ day.totals.calories }} / {{ day.goal.calorie_goal }} kcal
-    </span>
-    {% if day.goal.protein_goal > 0 %}
-    <span class="day-macro" style="color:#7C3AED">P: {{ day.totals.protein }}g / {{ day.goal.protein_goal | int }}g</span>
-    {% endif %}
-    {% if day.goal.carbs_goal > 0 %}
-    <span class="day-macro" style="color:#F59E0B">C: {{ day.totals.carbs }}g / {{ day.goal.carbs_goal | int }}g</span>
-    {% endif %}
-  </div>
-  {% if day.entries %}
-  <div class="table-wrap">
-    <table class="log-table">
-      <thead>
-        <tr>
-          <th>Food</th>
-          <th class="num">kcal</th>
-          <th class="num">P</th>
-          <th class="num">C</th>
-          <th class="num">F</th>
-        </tr>
-      </thead>
+  <div style="height:3px;background:var(--surface-1)"><div style="height:100%;width:{{ pct }}%;background:{% if over %}#E24B4A{% else %}#1D9E75{% endif %};transition:width .3s"></div></div>
+  <div class="day-body" style="display:none;border-top:0.5px solid var(--border)">
+    {% if d.entries %}
+    <table class="log-table" style="font-size:13px">
+      <thead><tr>
+        <th style="width:44%">Food</th>
+        <th class="num" style="width:13%">kcal</th>
+        <th class="num" style="width:14%">Protein</th>
+        <th class="num" style="width:13%">Carbs</th>
+        <th class="num" style="width:13%">Fat</th>
+      </tr></thead>
       <tbody>
-        {% for e in day.entries %}
+        {% for e in d.entries %}
         <tr>
-          <td>{{ e.name }}</td>
-          <td class="num">{{ e.calories }}</td>
-          <td class="num">{{ e.protein }}</td>
-          <td class="num">{{ e.carbs }}</td>
-          <td class="num">{{ e.fat }}</td>
+          <td><div class="fname">{{ e.name }}</div>{% if e.quantity %}<div class="fqty">{{ e.quantity }}</div>{% endif %}</td>
+          <td class="num vc">{{ e.calories }}</td>
+          <td class="num vp">{{ e.protein }}g</td>
+          <td class="num vb">{{ e.carbs }}g</td>
+          <td class="num vf">{{ e.fat }}g</td>
         </tr>
         {% endfor %}
       </tbody>
+      {% if d.entries | length > 1 %}
+      <tfoot><tr>
+        <td class="tot-label">Total · {{ d.entries | length }} items</td>
+        <td class="num tot-val vc">{{ d.totals.calories }}</td>
+        <td class="num tot-val vp">{{ d.totals.protein }}g</td>
+        <td class="num tot-val vb">{{ d.totals.carbs }}g</td>
+        <td class="num tot-val vf">{{ d.totals.fat }}g</td>
+      </tr></tfoot>
+      {% endif %}
     </table>
+    {% else %}
+    <div style="padding:14px 16px;font-size:13px;color:var(--text-muted);font-style:italic">No food logged this day</div>
+    {% endif %}
   </div>
-  {% else %}
-  <p class="empty-state">No entries</p>
-  {% endif %}
-</section>
+</div>
 {% endfor %}
+</div>
+
+<script>
+function toggleDay(hdr){
+  const body=hdr.parentElement.querySelector('.day-body');
+  const chev=hdr.querySelector('.chev');
+  const open=body.style.display==='none';
+  body.style.display=open?'block':'none';
+  chev.style.transform=open?'rotate(180deg)':'';
+}
+// auto-open today
+document.querySelectorAll('.day-hdr').forEach((h,i)=>{if(i===0)toggleDay(h);});
+</script>
+
+{% else %}
+<!-- ─── Monthly Calendar ────────────────────────────────────────────── -->
+<div class="card" style="padding:0;overflow:hidden">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:0.5px solid var(--border)">
+    <a href="{{ url_for('history', view='monthly', year=prev_month[0], month=prev_month[1]) }}" style="background:none;border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text-secondary);width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </a>
+    <div style="display:flex;align-items:center;gap:16px">
+      <span style="font-size:15px;font-weight:500;color:var(--text-primary)">{{ month_title }}</span>
+      <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-muted)">
+        <span style="width:12px;height:12px;border-radius:2px;background:#E1F5EE;border:0.5px solid #5DCAA5;display:inline-block"></span>Low
+        <span style="width:12px;height:12px;border-radius:2px;background:#5DCAA5;display:inline-block"></span>Medium
+        <span style="width:12px;height:12px;border-radius:2px;background:#1D9E75;display:inline-block"></span>On track
+        <span style="width:12px;height:12px;border-radius:2px;background:#E24B4A;display:inline-block"></span>Over
+      </div>
+    </div>
+    <a href="{{ url_for('history', view='monthly', year=next_month[0], month=next_month[1]) }}" style="background:none;border:0.5px solid var(--border);border-radius:var(--radius);color:var(--text-secondary);width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-left:0.5px solid var(--border);border-top:0.5px solid var(--border)">
+    {% for dow in ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] %}
+    <div style="padding:8px 4px;text-align:center;font-size:10px;font-weight:500;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;border-right:0.5px solid var(--border);border-bottom:0.5px solid var(--border);background:var(--surface-1)">{{ dow }}</div>
+    {% endfor %}
+    {% for week in weeks %}{% for d in week %}
+    {% if d %}
+      {% set cal = d.totals.calories %}
+      {% set goal_cal = d.goal.calorie_goal %}
+      {% set pct = [[((cal / goal_cal * 100) | int), 0] | max, 100] | min if goal_cal > 0 and cal > 0 else 0 %}
+      {% set pct_r = (cal / goal_cal) if goal_cal > 0 else 0 %}
+      {% if cal == 0 %}{% set bar_color = 'transparent' %}
+      {% elif pct_r > 1 %}{% set bar_color = '#E24B4A' %}
+      {% elif pct_r >= 0.8 %}{% set bar_color = '#1D9E75' %}
+      {% elif pct_r >= 0.4 %}{% set bar_color = '#5DCAA5' %}
+      {% else %}{% set bar_color = '#9FE1CB' %}{% endif %}
+      <div style="border-right:0.5px solid var(--border);border-bottom:0.5px solid var(--border);padding:8px 8px 10px;min-height:76px;position:relative{% if d.date == today %};outline:2px solid #1D9E75;outline-offset:-2px{% endif %}">
+        <div style="font-size:12px;font-weight:500;color:{% if d.date == today %}#1D9E75{% else %}var(--text-secondary){% endif %};margin-bottom:6px">{{ d.date[-2:] }}</div>
+        {% if cal > 0 %}
+        <div style="height:4px;background:var(--surface-1);border-radius:2px;margin-bottom:5px;overflow:hidden"><div style="height:100%;width:{{ pct }}%;background:{{ bar_color }};border-radius:2px"></div></div>
+        <div style="font-size:11px;font-weight:500;color:var(--text-primary)">{{ cal }} <span style="font-size:10px;color:var(--text-muted)">kcal</span></div>
+        {% else %}
+        <div style="height:4px;margin-bottom:5px"></div>
+        <div style="font-size:11px;color:var(--text-muted)">—</div>
+        {% endif %}
+      </div>
+    {% else %}
+      <div style="border-right:0.5px solid var(--border);border-bottom:0.5px solid var(--border);background:var(--surface-1);min-height:76px"></div>
+    {% endif %}
+    {% endfor %}{% endfor %}
+  </div>
+</div>
+
+<!-- ─── Monthly Day Cards ─────────────────────────────────────────── -->
+<div style="display:flex;flex-direction:column;gap:10px">
+{% for d in days | reverse %}{% if d.totals.calories > 0 %}
+{% set over = d.totals.calories > d.goal.calorie_goal %}
+{% set pct = [[((d.totals.calories / d.goal.calorie_goal * 100) | int), 0] | max, 100] | min if d.goal.calorie_goal > 0 else 0 %}
+<div class="card" style="padding:0;overflow:hidden">
+  <div class="day-hdr" style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer;user-select:none" onclick="toggleDay(this)">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div>
+        <span style="font-size:14px;font-weight:500;color:var(--text-primary)">{{ d.weekday_name }} {{ d.date }}</span>
+      </div>
+      <span style="font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;{% if over %}background:#FCEBEB;color:#A32D2D{% else %}background:#E1F5EE;color:#0F6E56{% endif %}">{% if over %}Over goal{% else %}On track{% endif %}</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:13px;font-weight:500">{{ d.totals.calories }} kcal</span>
+      <span style="font-size:12px;color:var(--text-muted)">/ {{ d.goal.calorie_goal }}</span>
+      <svg class="chev" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="color:var(--text-muted);transition:transform .2s"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+  </div>
+  <div style="height:3px;background:var(--surface-1)"><div style="height:100%;width:{{ pct }}%;background:{% if over %}#E24B4A{% else %}#1D9E75{% endif %}"></div></div>
+  <div class="day-body" style="display:none;border-top:0.5px solid var(--border)">
+    <table class="log-table" style="font-size:13px">
+      <thead><tr>
+        <th style="width:44%">Food</th><th class="num">kcal</th><th class="num">Protein</th><th class="num">Carbs</th><th class="num">Fat</th>
+      </tr></thead>
+      <tbody>
+        {% for e in d.entries %}
+        <tr>
+          <td><div class="fname">{{ e.name }}</div>{% if e.quantity %}<div class="fqty">{{ e.quantity }}</div>{% endif %}</td>
+          <td class="num vc">{{ e.calories }}</td><td class="num vp">{{ e.protein }}g</td><td class="num vb">{{ e.carbs }}g</td><td class="num vf">{{ e.fat }}g</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      {% if d.entries | length > 1 %}
+      <tfoot><tr>
+        <td class="tot-label">Total · {{ d.entries | length }} items</td>
+        <td class="num tot-val vc">{{ d.totals.calories }}</td>
+        <td class="num tot-val vp">{{ d.totals.protein }}g</td>
+        <td class="num tot-val vb">{{ d.totals.carbs }}g</td>
+        <td class="num tot-val vf">{{ d.totals.fat }}g</td>
+      </tr></tfoot>
+      {% endif %}
+    </table>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:0.5px solid var(--border)">
+      <div style="padding:12px 16px;text-align:center;border-right:0.5px solid var(--border)">
+        <div style="font-size:10px;font-weight:500;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">Protein</div>
+        <div style="font-size:16px;font-weight:500;color:#7F77DD">{{ d.totals.protein }}g</div>
+      </div>
+      <div style="padding:12px 16px;text-align:center;border-right:0.5px solid var(--border)">
+        <div style="font-size:10px;font-weight:500;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">Carbs</div>
+        <div style="font-size:16px;font-weight:500;color:#EF9F27">{{ d.totals.carbs }}g</div>
+      </div>
+      <div style="padding:12px 16px;text-align:center">
+        <div style="font-size:10px;font-weight:500;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">Fat</div>
+        <div style="font-size:16px;font-weight:500;color:var(--text-secondary)">{{ d.totals.fat }}g</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}{% endfor %}
+</div>
+
+<script>
+function toggleDay(hdr){
+  const body=hdr.parentElement.querySelector('.day-body');
+  const chev=hdr.querySelector('.chev');
+  const open=body.style.display==='none';
+  body.style.display=open?'block':'none';
+  chev.style.transform=open?'rotate(180deg)':'';
+}
+</script>
+{% endif %}
 
 {% endblock %}

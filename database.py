@@ -68,6 +68,33 @@ def init_db():
             conn.execute("ALTER TABLE daily_goals ADD COLUMN user_id INTEGER NOT NULL DEFAULT 1")
         except Exception:
             pass  # column already exists
+        # Migrate existing DBs where user_id was added via ALTER TABLE (no composite PK).
+        # Detect by checking if a UNIQUE index on (user_id, date) exists; if not, rebuild.
+        idx_exists = conn.execute(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND tbl_name='daily_goals' "
+            "AND (sql LIKE '%user_id%date%' OR sql LIKE '%date%user_id%')"
+        ).fetchone()[0]
+        pk_is_composite = conn.execute(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='daily_goals' "
+            "AND sql LIKE '%PRIMARY KEY (user_id, date)%'"
+        ).fetchone()[0]
+        if not idx_exists and not pk_is_composite:
+            conn.execute("""
+                CREATE TABLE daily_goals_new (
+                    user_id       INTEGER NOT NULL,
+                    date          TEXT    NOT NULL,
+                    calorie_goal  INTEGER NOT NULL,
+                    protein_goal  REAL    NOT NULL DEFAULT 0,
+                    carbs_goal    REAL    NOT NULL DEFAULT 0,
+                    PRIMARY KEY (user_id, date)
+                )
+            """)
+            conn.execute("""
+                INSERT OR REPLACE INTO daily_goals_new (user_id, date, calorie_goal, protein_goal, carbs_goal)
+                SELECT user_id, date, calorie_goal, protein_goal, carbs_goal FROM daily_goals
+            """)
+            conn.execute("DROP TABLE daily_goals")
+            conn.execute("ALTER TABLE daily_goals_new RENAME TO daily_goals")
         conn.execute("""
             CREATE TABLE IF NOT EXISTS ai_response_audit_logs (
                 id               INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -162,6 +189,36 @@ def get_entries_in_range(start_date: str, end_date: str, user_id: int) -> List[F
             (start_date, end_date, user_id),
         ).fetchall()
     return [FoodEntry(**dict(r)) for r in rows]
+
+
+def search_food_entries(query: str, user_id: int, limit: int = 20):
+    """Search historic food entries by name for a user."""
+    with get_db() as conn:
+        rows = conn.execute(
+            """
+            SELECT name,
+                   ROUND(AVG(calories)) AS calories,
+                   ROUND(AVG(protein), 1) AS protein,
+                   ROUND(AVG(carbs), 1) AS carbs,
+                   ROUND(AVG(fat), 1) AS fat
+            FROM food_entries
+            WHERE user_id = ? AND name LIKE ?
+            GROUP BY name
+            ORDER BY MAX(timestamp) DESC
+            LIMIT ?
+            """,
+            (user_id, f"%{query}%", limit),
+        ).fetchall()
+    return [
+        {
+            "name": row["name"],
+            "calories": int(row["calories"] or 0),
+            "protein": float(row["protein"] or 0.0),
+            "carbs": float(row["carbs"] or 0.0),
+            "fat": float(row["fat"] or 0.0),
+        }
+        for row in rows
+    ]
 
 
 # ---------------------------------------------------------------------------
