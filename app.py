@@ -680,7 +680,7 @@ def delete_user_route(user_id: int):
     if int(current_user.id) == user_id:
         flash("Cannot delete your own account.", "error")
         return redirect(url_for("admin_users"))
-    
+
     user = db.get_user_by_id(user_id)
     if user:
         db.delete_user(user_id)
@@ -696,4 +696,4 @@ def delete_user_route(user_id: int):
 db.init_db()
 
 if __name__ == "__main__":
-    app.run(debug=False, host="0.0.0.0", port=3000)
+    app.run(debug=False, host="0.0.0.0", port=4000)
